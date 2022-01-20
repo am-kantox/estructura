@@ -185,16 +185,28 @@ defmodule Estructura.Hooks do
 
   if match?({:module, StreamData}, Code.ensure_compiled(StreamData)) do
     defp generator_ast([{_, _} | _] = types) do
-      quote generated: true, location: :keep, bind_quoted: [types: Macro.escape(types)] do
+      types = Macro.escape(types)
+
+      quote generated: true, location: :keep, bind_quoted: [types: types] do
         module = __MODULE__
 
         @__generator__ %{types: types, fields: Keyword.keys(types)}
 
-        defp fix_gen({fun, args}) when is_atom(fun) and is_list(args) do
-          {{:., [], [{:__aliases__, [alias: false], [:StreamData]}, fun]}, [], args}
+        defp fix_gen(many) when is_list(many), do: Enum.map(many, &fix_gen/1)
+
+        defp fix_gen({key, {mod, fun, args} = value})
+             when is_atom(mod) and is_atom(fun) and is_list(args),
+             do: {key, fix_gen(value)}
+
+        defp fix_gen({key, {mod, fun}}) when is_atom(mod) and is_atom(fun),
+          do: fix_gen({key, {mod, fun, []}})
+
+        defp fix_gen({mod, fun, args}) when is_atom(mod) and is_atom(fun) and is_list(args) do
+          {{:., [], [{:__aliases__, [alias: false], [:StreamData]}, fun]}, [], fix_gen(args)}
         end
 
-        defp fix_gen(fun) when is_atom(fun), do: fix_gen({fun, []})
+        defp fix_gen({mod, fun}) when is_atom(mod) and is_atom(fun), do: fix_gen({mod, fun, []})
+        defp fix_gen(value), do: value
 
         # @dialyzer {:nowarn_function, generation_leaf: 1}
         defp generation_leaf(args),

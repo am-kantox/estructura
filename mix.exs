@@ -8,7 +8,7 @@ defmodule Estructura.MixProject do
     [
       app: @app,
       version: @version,
-      elixir: "~> 1.11",
+      elixir: "~> 1.12",
       compilers: compilers(Mix.env()),
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),

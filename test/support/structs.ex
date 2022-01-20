@@ -9,9 +9,11 @@ defmodule Estructura.Full do
   @moduledoc false
   use Estructura, access: true, enumerable: true, collectable: :bar,
     generator: [
-      foo: :integer,
-      bar: {:string, [:alphanumeric]}
-  ]
+      foo: {StreamData, :integer},
+      bar: {StreamData, :string, [:alphanumeric]},
+      baz: {StreamData, :fixed_map,
+        [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]}
+    ]
 
   defstruct foo: 42, bar: "", baz: %{inner_baz: 42}, zzz: nil
 end

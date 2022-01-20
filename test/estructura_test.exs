@@ -64,7 +64,8 @@ defmodule EstructuraTest do
   end
 
   property "Generation" do
-    check all %Full{foo: foo, bar: bar, zzz: zzz} <- Full.__generator__(%Full{zzz: 42}) do
+    check all %Full{foo: foo, bar: bar, baz: baz, zzz: zzz} <- Full.__generator__(%Full{zzz: 42}) do
+      assert match?(%{key1: v1, key2: v2} when is_integer(v1) and is_integer(v2), baz)
       assert is_integer(foo)
       assert is_binary(bar)
       assert zzz == 42

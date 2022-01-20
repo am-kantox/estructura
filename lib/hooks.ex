@@ -269,7 +269,7 @@ defmodule Estructura.Hooks do
            do: types,
            else: (_ -> false)
 
-    enumerable_ast = enumerable_ast(Map.get(config, :enumerable, false) || types != false, fields)
+    enumerable_ast = enumerable_ast(Map.get(config, :enumerable, false), fields)
 
     generator_ast = generator_ast(types)
 

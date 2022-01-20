@@ -8,7 +8,7 @@ defmodule Estructura.MixProject do
     [
       app: @app,
       version: @version,
-      elixir: "~> 1.10",
+      elixir: "~> 1.11",
       compilers: compilers(Mix.env()),
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -73,7 +73,7 @@ defmodule Estructura.MixProject do
   defp package do
     [
       name: @app,
-      files: ~w|lib .formatter.exs .dialyzer/ignore.exs mix.exs README* LICENSE|,
+      files: ~w|lib stuff .formatter.exs .dialyzer/ignore.exs mix.exs README* LICENSE|,
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["Kantox LTD"],
       links: %{

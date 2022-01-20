@@ -56,7 +56,7 @@ defmodule Estructura.Hooks do
       module = __MODULE__
 
       defimpl Enumerable, for: __MODULE__ do
-        def count(_), do: unquote(count)
+        def count(_), do: {:ok, unquote(count)}
 
         for key <- fields do
           def member?(%unquote(module){} = s, {unquote(key), value}),
@@ -91,6 +91,8 @@ defmodule Estructura.Hooks do
       module = __MODULE__
 
       defimpl Collectable, for: __MODULE__ do
+        @dialyzer {:nowarn_function, into: 1}
+
         def into(%unquote(module){unquote(field) => %MapSet{} = old_value} = s) do
           fun = fn
             list, {:cont, x} ->

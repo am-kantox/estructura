@@ -1,21 +1,16 @@
-# Estructura
+# Estructura    [![Kantox ❤ OSS](https://img.shields.io/badge/❤-kantox_oss-informational.svg)](https://kantox.com/)  [![Test](https://github.com/am-kantox/estructura/workflows/Test/badge.svg)](https://github.com/am-kantox/estructura/actions?query=workflow%3ATest)  [![Dialyzer](https://github.com/am-kantox/estructura/workflows/Dialyzer/badge.svg)](https://github.com/am-kantox/estructura/actions?query=workflow%3ADialyzer)
 
-**TODO: Add description**
+**Extensions for _Elixir_ structures.**
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `estructura` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:estructura, "~> 0.1.0"}
+    {:estructura, "~> 0.1"}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/estructura>.
+## [Documentation](https://hexdocs.pm/estructura)
 

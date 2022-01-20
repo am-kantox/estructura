@@ -7,7 +7,11 @@ end
 
 defmodule Estructura.Full do
   @moduledoc false
-  use Estructura, access: true, enumerable: true, collectable: :bar
+  use Estructura, access: true, enumerable: true, collectable: :bar,
+    generator: [
+      foo: :integer,
+      bar: {:string, [:alphanumeric]}
+  ]
 
   defstruct foo: 42, bar: "", baz: %{inner_baz: 42}, zzz: nil
 end

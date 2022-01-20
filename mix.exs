@@ -18,6 +18,15 @@ defmodule Estructura.MixProject do
       deps: deps(),
       aliases: aliases(),
       docs: docs(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        credo: :ci,
+        dialyzer: :ci,
+        tests: :test,
+        "coveralls.json": :test,
+        "coveralls.html": :test,
+        "quality.ci": :ci
+      ],
       releases: [],
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/dialyzer.plt"},
@@ -35,11 +44,12 @@ defmodule Estructura.MixProject do
 
   defp deps do
     [
+      {:stream_data, "~> 0.5", only: [:dev, :test], optional: true},
       {:boundary, "~> 0.4", only: [:dev, :test, :ci], runtime: false},
-      {:stream_data, "~> 0.5", only: [:dev, :test, :ci]},
+      {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},
       {:dialyxir, "~> 1.0", only: [:dev, :test, :ci], runtime: false},
-      {:ex_doc, "~> 0.11", only: :dev}
+      {:ex_doc, "~> 0.11", only: [:dev]}
     ]
   end
 

@@ -6,13 +6,13 @@ defmodule Estructura.Hooks do
 
   defp access_ast(true, fields) when is_list(fields) do
     opening =
-      quote do
+      quote generated: true, location: :keep do
         @behaviour Access
       end
 
     clauses =
       for key <- fields do
-        quote do
+        quote generated: true, location: :keep do
           @impl Access
           def fetch(%__MODULE__{unquote(key) => value}, unquote(key)), do: {:ok, value}
 
@@ -31,7 +31,7 @@ defmodule Estructura.Hooks do
       end
 
     closing =
-      quote do
+      quote generated: true, location: :keep do
         @impl Elixir.Access
         def fetch(%__MODULE__{}, _key), do: :error
 
@@ -52,7 +52,7 @@ defmodule Estructura.Hooks do
   defp enumerable_ast(true, fields) when is_list(fields) do
     count = Enum.count(fields)
 
-    quote bind_quoted: [fields: fields, count: count] do
+    quote generated: true, location: :keep, bind_quoted: [fields: fields, count: count] do
       module = __MODULE__
 
       defimpl Enumerable, for: __MODULE__ do
@@ -82,12 +82,11 @@ defmodule Estructura.Hooks do
     end
   end
 
-  @spec collectable_ast(atom()) :: Macro.t()
-  defp collectable_ast(nil), do: []
+  @spec collectable_ast(false | atom()) :: Macro.t()
   defp collectable_ast(false), do: []
 
   defp collectable_ast(field) when is_atom(field) do
-    quote bind_quoted: [field: field] do
+    quote generated: true, location: :keep, bind_quoted: [field: field] do
       module = __MODULE__
 
       defimpl Collectable, for: __MODULE__ do
@@ -181,6 +180,60 @@ defmodule Estructura.Hooks do
     end
   end
 
+  @spec generator_ast(false | keyword()) :: Macro.t()
+  defp generator_ast(false), do: []
+
+  if match?({:module, StreamData}, Code.ensure_compiled(StreamData)) do
+    defp generator_ast([{_, _} | _] = types) do
+      quote generated: true, location: :keep, bind_quoted: [types: Macro.escape(types)] do
+        module = __MODULE__
+
+        @__generator__ %{types: types, fields: Keyword.keys(types)}
+
+        defp fix_gen({fun, args}) when is_atom(fun) and is_list(args) do
+          {{:., [], [{:__aliases__, [alias: false], [:StreamData]}, fun]}, [], args}
+        end
+
+        defp fix_gen(fun) when is_atom(fun), do: fix_gen({fun, []})
+
+        # @dialyzer {:nowarn_function, generation_leaf: 1}
+        defp generation_leaf(args),
+          do: {{:., [], [StreamData, :constant]}, [], [{:{}, [], args}]}
+
+        defp generation_clause({arg, gen}, acc) do
+          {{:., [], [StreamData, :bind]}, [], [gen, {:fn, [], [{:->, [], [[arg], acc]}]}]}
+        end
+
+        defp generation_bound do
+          args =
+            Enum.map(@__generator__.types, fn {arg, gen} ->
+              {Macro.var(arg, nil), fix_gen(gen)}
+            end)
+
+          init_args = args |> Enum.map(&elem(&1, 0))
+
+          Enum.reduce(args, generation_leaf(init_args), &generation_clause/2)
+        end
+
+        defmacrop do_generation, do: generation_bound()
+
+        @doc false
+        @spec __generator__() :: StreamData.t(%__MODULE__{})
+        def __generator__, do: __generator__(%__MODULE__{})
+
+        @spec __generator__(%__MODULE__{}) :: StreamData.t()
+        def __generator__(%__MODULE__{} = this) do
+          do_generation()
+          |> StreamData.map(&Tuple.to_list/1)
+          |> StreamData.map(&Enum.zip(@__generator__.fields, &1))
+          |> StreamData.map(&struct(this, &1))
+        end
+
+        defoverridable __generator__: 0, __generator__: 1
+      end
+    end
+  end
+
   ##############################################################################
 
   @spec fields(module()) :: [atom()]
@@ -204,13 +257,23 @@ defmodule Estructura.Hooks do
 
     access_ast = access_ast(Map.get(config, :access, false), fields)
 
-    enumerable_ast = enumerable_ast(Map.get(config, :enumerable, false), fields)
-
     field = Map.get(config, :collectable, false)
     if field && field not in fields, do: raise(KeyError, key: field, term: __MODULE__)
     collectable_ast = collectable_ast(field)
 
-    [access_ast, enumerable_ast, collectable_ast]
+    # [MAYBE] fields |> Enum.zip(Stream.cycle([StreamData.term()])) |> Keyword.merge(types),
+    types =
+      with {:module, _} <- Code.ensure_compiled(StreamData),
+           types when is_list(types) <- Map.get(config, :generator, false),
+           true <- Keyword.keyword?(types),
+           do: types,
+           else: (_ -> false)
+
+    enumerable_ast = enumerable_ast(Map.get(config, :enumerable, false) || types != false, fields)
+
+    generator_ast = generator_ast(types)
+
+    [access_ast, enumerable_ast, collectable_ast, generator_ast]
     |> Enum.map(&List.wrap/1)
     |> Enum.reduce(&Kernel.++/2)
   end

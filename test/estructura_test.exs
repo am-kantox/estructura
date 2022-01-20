@@ -62,4 +62,14 @@ defmodule EstructuraTest do
                    fn -> Enum.map(%Void{}, & &1) end
     end
   end
+
+  property "Generation" do
+    check all %Full{foo: foo, bar: bar, zzz: zzz} <- Full.__generator__(%Full{zzz: 42}) do
+      assert is_integer(foo)
+      assert is_binary(bar)
+      assert zzz == 42
+    end
+
+    refute Void.__info__(:functions)[:__generate__]
+  end
 end

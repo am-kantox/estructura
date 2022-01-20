@@ -202,7 +202,7 @@ defmodule Estructura.Hooks do
           do: fix_gen({key, {mod, fun, []}})
 
         defp fix_gen({mod, fun, args}) when is_atom(mod) and is_atom(fun) and is_list(args) do
-          {{:., [], [{:__aliases__, [alias: false], [:StreamData]}, fun]}, [], fix_gen(args)}
+          {{:., [], [mod, fun]}, [], fix_gen(args)}
         end
 
         defp fix_gen({mod, fun}) when is_atom(mod) and is_atom(fun), do: fix_gen({mod, fun, []})

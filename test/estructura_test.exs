@@ -17,7 +17,7 @@ defmodule EstructuraTest do
   @void %Void{}
 
   property "Access" do
-    check all i <- integer() do
+    check all j <- integer(), i <- StreamData.constant(if(j < 0, do: -j, else: j)) do
       assert put_in(@full, [:foo], i) == %Full{@full | foo: i}
 
       assert put_in(@full, [:baz, :inner_baz], i) == %Full{
@@ -39,6 +39,20 @@ defmodule EstructuraTest do
     assert_raise UndefinedFunctionError,
                  ~r/Estructura.Void does not implement the Access behaviour/,
                  fn -> pop_in(@void, [:foo]) end
+  end
+
+  property "Coercion" do
+    check all i <- string(?0..?9, min_length: 1) do
+      put_in(@full, [:foo], i) == %Full{@full | foo: String.to_integer(i)}
+    end
+
+    assert_raise ArgumentError, ~r/42a is not a valid integer value/, fn ->
+      put_in(@full, [:foo], "42a")
+    end
+
+    assert_raise ArgumentError, ":foo must be positive", fn ->
+      put_in(@full, [:foo], -42)
+    end
   end
 
   property "Collectable" do

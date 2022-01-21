@@ -75,6 +75,24 @@ defmodule Estructura do
   #    ]
   ```
 
+  ### Coercion
+
+  When `coercion: true | [key()]` is passed as an argument to `use Estructura`,
+  the ovewriteable stubs for `coercion_×××/1` are generated for all the fields passed.
+
+  To make a coercion work with `MyStruct.put/3` and `put_in/3` provided
+  by `Access` implementation, the consumer module should implement `coercion_×××/1`
+  functions for each field.
+
+  ### Validation
+
+  When `validation: true | [key()]` is passed as an argument to `use Estructura`,
+  the ovewriteable stubs for `validation_×××/1` are generated for all the fields passed.
+
+  To make a validation work with `MyStruct.put/3` and `put_in/3` provided
+  by `Access` implementation, the consumer module should implement `validation_×××/1`
+  functions for each field.
+
   ### Generation
 
   If `generator` keyword argument has been passed, `MyStruct.__generate__/{0,1}` can be

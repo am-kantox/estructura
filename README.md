@@ -12,5 +12,9 @@ def deps do
 end
 ```
 
+## Changelog
+
+* `0.2.0` — `coercion`, `validation`, `put/3`
+
 ## [Documentation](https://hexdocs.pm/estructura)
 

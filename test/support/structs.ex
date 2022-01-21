@@ -13,7 +13,7 @@ defmodule Estructura.Full do
       bar: {StreamData, :string, [:alphanumeric]},
       baz: {StreamData, :fixed_map,
         [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]},
-      zzz: {Estructura.Full, :zzz_generator}
+      zzz: &Estructura.Full.zzz_generator/0
     ]
 
   defstruct foo: 42, bar: "", baz: %{inner_baz: 42}, zzz: nil

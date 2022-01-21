@@ -194,6 +194,9 @@ defmodule Estructura.Hooks do
 
         defp fix_gen(many) when is_list(many), do: Enum.map(many, &fix_gen/1)
 
+        defp fix_gen(capture) when is_function(capture, 0),
+          do: with(info <- Function.info(capture), do: fix_gen({info[:module], info[:name]}))
+
         defp fix_gen({key, {mod, fun, args} = value})
              when is_atom(mod) and is_atom(fun) and is_list(args),
              do: {key, fix_gen(value)}
@@ -222,7 +225,7 @@ defmodule Estructura.Hooks do
               {Macro.var(arg, nil), fix_gen(gen)}
             end)
 
-          init_args = args |> Enum.map(&elem(&1, 0))
+          init_args = Enum.map(args, &elem(&1, 0))
 
           Enum.reduce(args, generation_leaf(init_args), &generation_clause/2)
         end
@@ -241,7 +244,7 @@ defmodule Estructura.Hooks do
           |> StreamData.map(&struct(this, &1))
         end
 
-        defoverridable __generator__: 0, __generator__: 1
+        defoverridable __generator__: 1
       end
     end
   end

@@ -15,14 +15,22 @@ defmodule Estructura do
 
   `use Estructura` accepts four keyword arguments.
 
-    * `access: boolean()` whether to generate the `Access` implementation, default `true`
+    * `access: boolean()` whether to generate the `Access` implementation, default `true`; when `true`,
+      it also produces `put/3` and `get/3` methods to be used with `coercion` and `validation`
+    * `coercion: boolean() | [key()]` whether to generate the bunch of `coerce_×××/1` functions
+      to be overwritten by implementations, default `false`
+    * `validation: boolean() | [key()]` whether to generate the bunch of `validate_×××/1` functions
+      to be overwritten by implementations, default `false`
     * `enumerable: boolean()` whether to generate the `Enumerable` porotocol implementation, default `false`
     * `collectable: false | key()` whether to generate the `Collectable` protocol implementation,
       default `false`; if non-falsey atom is given, it must point to a struct field where `Collectable`
       would collect. Should be one of `list()`, `map()`, `MapSet.t()`, `bitstribg()`
-    * `generator: %{optional(key()) => Estructura.generator()}` the instructions for the `__generate__/{0,1}`
-      functions that would produce the target structure values suitable for usage in `StreamData` property
-      testing; the generated `__generator__/1` function is overwritable.
+    * `generator: %{optional(key()) => Estructura.Config.generator()}` the instructions
+      for the `__generate__/{0,1}` functions that would produce the target structure values suitable
+      for usage in `StreamData` property testing; the generated `__generator__/1` function is overwritable.
+
+  Please note, that setting `coercion` and/or `validation` to truthy values has effect
+    if and only if `access` has been also set to `true`.
 
   Typical example of usage would be:
 
@@ -30,6 +38,8 @@ defmodule Estructura do
   defmodule MyStruct do
     use Estructura,
       access: true,
+      coercion: [:foo],
+      validation: true,
       enumerable: true,
       collectable: :bar,
       generator: [
@@ -83,16 +93,13 @@ defmodule Estructura do
 
   use Boundary
 
-  @typedoc "The generator to be passed to `use Estructura` should be given in one of these forms"
-  @type generator :: {module(), atom()} | {module(), atom(), [any()]} | (() -> any())
-
   @doc false
   defmacro __using__(opts) do
     quote do
       @__estructura__ struct!(Estructura.Config, unquote(opts))
 
-      @after_compile Estructura.Hooks
-      @before_compile Estructura.Hooks
+      # @after_compile Estructura.Hooks
+      @before_compile {Estructura.Hooks, :inject_estructura}
     end
   end
 end

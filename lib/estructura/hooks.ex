@@ -1,30 +1,59 @@
 defmodule Estructura.Hooks do
   @moduledoc false
 
-  @spec access_ast(boolean(), [atom()]) :: Macro.t()
+  alias Estructura.Config, as: Cfg
+
+  @spec access_ast(boolean(), [Cfg.key()]) :: Macro.t()
   defp access_ast(false, _fields), do: []
 
   defp access_ast(true, fields) when is_list(fields) do
     opening =
       quote generated: true, location: :keep do
         @behaviour Access
+
+        @doc """
+        Puts the value for the given key into the structure, passing coercion _and_ validation
+        """
+        @spec put(%__MODULE__{}, Cfg.key(), any()) ::
+                {:ok, %__MODULE__{}} | {:error, any}
+        def put(data, key, value)
+
+        @doc """
+        Gets the value for the given key from the structure
+        """
+        @spec get(%__MODULE__{}, Cfg.key(), any()) :: any()
+        def get(data, key, default \\ nil)
       end
 
     clauses =
       for key <- fields do
         quote generated: true, location: :keep do
+          def put(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
+            with {:ok, value} <- coerce(unquote(key), value),
+                 {:ok, value} <- validate(unquote(key), value),
+                 do: {:ok, %__MODULE__{data | unquote(key) => value}}
+          end
+
+          def get(%__MODULE__{unquote(key) => value} = data, unquote(key), _), do: value
+
           @impl Access
           def fetch(%__MODULE__{unquote(key) => value}, unquote(key)), do: {:ok, value}
 
-          @impl Elixir.Access
+          @impl Access
           def pop(%__MODULE__{unquote(key) => value} = data, unquote(key)),
             do: {value, %{data | unquote(key) => nil}}
 
-          @impl Elixir.Access
+          @impl Access
           def get_and_update(%__MODULE__{unquote(key) => value} = data, unquote(key), fun) do
             case fun.(value) do
-              :pop -> pop(data, unquote(key))
-              {current_value, new_value} -> {current_value, %{data | unquote(key) => new_value}}
+              :pop ->
+                pop(data, unquote(key))
+
+              {current_value, new_value} ->
+                case put(data, unquote(key), new_value) do
+                  {:ok, new_value} -> {current_value, new_value}
+                  {:error, reason} -> raise ArgumentError, reason
+                end
             end
           end
         end
@@ -32,13 +61,19 @@ defmodule Estructura.Hooks do
 
     closing =
       quote generated: true, location: :keep do
-        @impl Elixir.Access
+        def put(%__MODULE__{}, key, _),
+          do: {:error, Exception.message(%KeyError{key: key, term: __MODULE__})}
+
+        def get(%__MODULE__{}, _key, default),
+          do: default
+
+        @impl Access
         def fetch(%__MODULE__{}, _key), do: :error
 
-        @impl Elixir.Access
+        @impl Access
         def pop(%__MODULE__{} = data, _key), do: {nil, data}
 
-        @impl Elixir.Access
+        @impl Access
         def get_and_update(%__MODULE__{}, key, _),
           do: raise(KeyError, key: key, term: __MODULE__)
       end
@@ -46,7 +81,53 @@ defmodule Estructura.Hooks do
     [opening | clauses] ++ [closing]
   end
 
-  @spec enumerable_ast(boolean(), [atom()]) :: Macro.t()
+  @spec coercion_ast(boolean() | [Cfg.key()], [Cfg.key()]) :: Macro.t()
+  defp coercion_ast(false, all_fields),
+    do: [
+      quote do
+        defp coerce(key, value) when key in unquote(all_fields), do: {:ok, value}
+      end
+    ]
+
+  defp coercion_ast(true, all_fields), do: coercion_ast(all_fields, all_fields)
+
+  defp coercion_ast(fields, all_fields) when is_list(fields) do
+    for key <- fields do
+      quote generated: true, location: :keep do
+        @doc "Coercion function to be called for `#{unquote(key)}` key when put through `put/3` and/or `Access`"
+        @spec unquote(:"coerce_#{key}")(any()) :: {:ok, any()} | {:error, any()}
+        def unquote(:"coerce_#{key}")(value), do: {:ok, value}
+
+        defp coerce(unquote(key), value), do: unquote(:"coerce_#{key}")(value)
+        defoverridable [{unquote(:"coerce_#{key}"), 1}]
+      end
+    end ++ coercion_ast(false, all_fields)
+  end
+
+  @spec validation_ast(boolean() | [Cfg.key()], [Cfg.key()]) :: Macro.t()
+  defp validation_ast(false, all_fields),
+    do: [
+      quote do
+        defp validate(key, value) when key in unquote(all_fields), do: {:ok, value}
+      end
+    ]
+
+  defp validation_ast(true, all_fields), do: validation_ast(all_fields, all_fields)
+
+  defp validation_ast(fields, all_fields) when is_list(fields) do
+    for key <- fields do
+      quote generated: true, location: :keep do
+        @doc "Validation function to be called for `#{unquote(key)}` key when put through `put/3` and/or `Access`"
+        @spec unquote(:"validate_#{key}")(any()) :: {:ok, any()} | {:error, any()}
+        def unquote(:"validate_#{key}")(value), do: {:ok, value}
+
+        defp validate(unquote(key), value), do: unquote(:"validate_#{key}")(value)
+        defoverridable [{unquote(:"validate_#{key}"), 1}]
+      end
+    end ++ validation_ast(false, all_fields)
+  end
+
+  @spec enumerable_ast(boolean(), [Cfg.key()]) :: Macro.t()
   defp enumerable_ast(false, _fields), do: []
 
   defp enumerable_ast(true, fields) when is_list(fields) do
@@ -185,8 +266,6 @@ defmodule Estructura.Hooks do
 
   if match?({:module, StreamData}, Code.ensure_compiled(StreamData)) do
     defp generator_ast([{_, _} | _] = types) do
-      types = Macro.escape(types)
-
       quote generated: true, location: :keep, bind_quoted: [types: types] do
         module = __MODULE__
 
@@ -209,7 +288,7 @@ defmodule Estructura.Hooks do
         end
 
         defp fix_gen({mod, fun}) when is_atom(mod) and is_atom(fun), do: fix_gen({mod, fun, []})
-        defp fix_gen(value), do: value
+        defp fix_gen(value), do: Macro.escape(value)
 
         # @dialyzer {:nowarn_function, generation_leaf: 1}
         defp generation_leaf(args),
@@ -264,7 +343,7 @@ defmodule Estructura.Hooks do
 
   ##############################################################################
 
-  @spec fields(module()) :: [atom()]
+  @spec fields(module()) :: [Cfg.key()]
   defp fields(module) do
     module
     |> Module.get_attribute(:__struct__, %{})
@@ -276,7 +355,7 @@ defmodule Estructura.Hooks do
     # IO.inspect(env.module.__struct__, label: "AFTER")
   end
 
-  defmacro __before_compile__(env) do
+  defmacro inject_estructura(env) do
     module = env.module
 
     fields = fields(module)
@@ -284,6 +363,8 @@ defmodule Estructura.Hooks do
     config = Module.get_attribute(module, :__estructura__)
 
     access_ast = access_ast(config.access, fields)
+    coercion_ast = coercion_ast(config.access && config.coercion, fields)
+    validation_ast = validation_ast(config.access && config.validation, fields)
 
     field = config.collectable
     if field && field not in fields, do: raise(KeyError, key: field, term: __MODULE__)
@@ -293,14 +374,14 @@ defmodule Estructura.Hooks do
       with {:module, _} <- Code.ensure_compiled(StreamData),
            types when is_list(types) <- config.generator,
            true <- Keyword.keyword?(types),
-           do: types,
+           do: Macro.escape(types),
            else: (_ -> false)
 
     enumerable_ast = enumerable_ast(config.enumerable, fields)
 
     generator_ast = generator_ast(types)
 
-    [access_ast, enumerable_ast, collectable_ast, generator_ast]
+    [access_ast, coercion_ast, validation_ast, enumerable_ast, collectable_ast, generator_ast]
     |> Enum.map(&List.wrap/1)
     |> Enum.reduce(&Kernel.++/2)
   end

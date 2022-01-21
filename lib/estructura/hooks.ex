@@ -232,11 +232,24 @@ defmodule Estructura.Hooks do
 
         defmacrop do_generation, do: generation_bound()
 
-        @doc false
+        @doc """
+        Returns the generator to be used in `StreamData`-powered property testing, based
+          on the specification given to `use #{inspect(__MODULE__)}`.
+        """
         @spec __generator__() :: StreamData.t(%__MODULE__{})
         def __generator__, do: __generator__(%__MODULE__{})
 
-        @spec __generator__(%__MODULE__{}) :: StreamData.t()
+        @doc """
+        Returns the generator to be used in `StreamData`-powered property testing, based
+          on the specification given to `use #{inspect(__MODULE__)}`, which was
+
+        ```elixir
+        #{inspect(Module.get_attribute(__MODULE__, :__estructura__), pretty: true, width: 80)}
+        ```
+
+        The argument given would be used as a template to generate new values.
+        """
+        @spec __generator__(%__MODULE__{}) :: StreamData.t(%__MODULE__{})
         def __generator__(%__MODULE__{} = this) do
           do_generation()
           |> StreamData.map(&Tuple.to_list/1)
@@ -270,21 +283,20 @@ defmodule Estructura.Hooks do
 
     config = Module.get_attribute(module, :__estructura__)
 
-    access_ast = access_ast(Map.get(config, :access, false), fields)
+    access_ast = access_ast(config.access, fields)
 
-    field = Map.get(config, :collectable, false)
+    field = config.collectable
     if field && field not in fields, do: raise(KeyError, key: field, term: __MODULE__)
     collectable_ast = collectable_ast(field)
 
-    # [MAYBE] fields |> Enum.zip(Stream.cycle([StreamData.term()])) |> Keyword.merge(types),
     types =
       with {:module, _} <- Code.ensure_compiled(StreamData),
-           types when is_list(types) <- Map.get(config, :generator, false),
+           types when is_list(types) <- config.generator,
            true <- Keyword.keyword?(types),
            do: types,
            else: (_ -> false)
 
-    enumerable_ast = enumerable_ast(Map.get(config, :enumerable, false), fields)
+    enumerable_ast = enumerable_ast(config.enumerable, fields)
 
     generator_ast = generator_ast(types)
 

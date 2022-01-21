@@ -17,7 +17,7 @@ defmodule EstructuraTest do
   @void %Void{}
 
   property "Access" do
-    check all i <- integer(), i >= 0 do
+    check all i <- integer(), i = if i < 0, -i, else: i do
       assert put_in(@full, [:foo], i) == %Full{@full | foo: i}
 
       assert put_in(@full, [:baz, :inner_baz], i) == %Full{

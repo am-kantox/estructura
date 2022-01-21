@@ -11,6 +11,8 @@ defmodule EstructuraTest do
 
   alias Estructura.{Full, Void}
 
+  require Integer
+
   @full %Full{}
   @void %Void{}
 
@@ -68,7 +70,7 @@ defmodule EstructuraTest do
       assert match?(%{key1: v1, key2: v2} when is_integer(v1) and is_integer(v2), baz)
       assert is_integer(foo)
       assert is_binary(bar)
-      assert zzz == 42
+      assert is_integer(zzz) and Integer.is_even(zzz)
     end
 
     refute Void.__info__(:functions)[:__generate__]

@@ -12,10 +12,16 @@ defmodule Estructura.Full do
       foo: {StreamData, :integer},
       bar: {StreamData, :string, [:alphanumeric]},
       baz: {StreamData, :fixed_map,
-        [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]}
+        [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]},
+      zzz: {Estructura.Full, :zzz_generator}
     ]
 
   defstruct foo: 42, bar: "", baz: %{inner_baz: 42}, zzz: nil
+
+  require Integer
+  def zzz_generator do
+    StreamData.filter(StreamData.integer(), &Integer.is_even/1)
+  end
 end
 
 defmodule Estructura.Collectable.List do

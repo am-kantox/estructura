@@ -1,5 +1,5 @@
 defmodule Estructura do
-  @moduledoc """
+  @moduledoc ~S"""
   `Estructura` is a set of extensions for Elixir structures,
     such as `Access` implementation, `Enumerable` and `Collectable`
     implementations, validations and test data generation via `StreamData`.
@@ -38,8 +38,8 @@ defmodule Estructura do
   defmodule MyStruct do
     use Estructura,
       access: true,
-      coercion: [:foo],
-      validation: true,
+      coercion: [:foo], # requires `c:MyStruct.Coercible.coerce_foo/1` impl
+      validation: true, # requires `c:MyStruct.Validatable.validate_×××/1` impls
       enumerable: true,
       collectable: :bar,
       generator: [
@@ -50,6 +50,28 @@ defmodule Estructura do
       ]
 
     defstruct foo: 42, bar: [], baz: %{}
+
+    @impl MyStruct.Coercible
+    def coerce_foo(value) when is_integer(value), do: {:ok, value}
+    def coerce_foo(value) when is_float(value), do: {:ok, round(value)}
+    def coerce_foo(value) when is_binary(value) do
+      case Integer.parse(value) do
+        {value, ""} -> {:ok, value}
+        _ -> {:error, "#{value} is not a valid integer value"}
+      end
+    end
+    def coerce_foo(value),
+      do: {:error, "Cannot coerce value given for `foo` field (#{inspect(value)})"}
+
+    @impl MyStruct.Validatable
+    def validate_foo(value) when value >= 0, do: {:ok, value}
+    def validate_foo(_), do: {:error, ":foo must be positive"}
+
+    @impl MyStruct.Validatable
+    def validate_bar(value), do: {:ok, value}
+
+    @impl MyStruct.Validatable
+    def validate_baz(value), do: {:ok, value}
   end
   ```
 

@@ -25,6 +25,7 @@ defmodule Estructura.MixProject do
         tests: :test,
         "coveralls.json": :test,
         "coveralls.html": :test,
+        "hex.publish": :ci,
         "quality.ci": :ci
       ],
       releases: [],
@@ -49,7 +50,7 @@ defmodule Estructura.MixProject do
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},
       {:dialyxir, "~> 1.0", only: [:dev, :test, :ci], runtime: false},
-      {:ex_doc, "~> 0.11", only: [:dev]}
+      {:ex_doc, "~> 0.11", only: [:dev, :ci]}
     ]
   end
 

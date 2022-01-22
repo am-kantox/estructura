@@ -78,20 +78,24 @@ defmodule Estructura do
   ### Coercion
 
   When `coercion: true | [key()]` is passed as an argument to `use Estructura`,
-  the ovewriteable stubs for `coercion_×××/1` are generated for all the fields passed.
+  the nested behaviour `Coercible` is generated and the target module claims to implement it.
 
   To make a coercion work with `MyStruct.put/3` and `put_in/3` provided
-  by `Access` implementation, the consumer module should implement `coercion_×××/1`
-  functions for each field.
+  by `Access` implementation, the consumer module should implement `MyStruct.Coercible`
+  behaviour.
+
+  For the consumer convenience, the warnings for not implemented functions will be issued by compiler.
 
   ### Validation
 
   When `validation: true | [key()]` is passed as an argument to `use Estructura`,
-  the ovewriteable stubs for `validation_×××/1` are generated for all the fields passed.
+  the nested behaviour `Validatable` is generated and the target module claims to implement it.
 
   To make a validation work with `MyStruct.put/3` and `put_in/3` provided
-  by `Access` implementation, the consumer module should implement `validation_×××/1`
-  functions for each field.
+  by `Access` implementation, the consumer module should implement `MyStruct.Validatable`
+  behaviour.
+
+  For the consumer convenience, the warnings for not implemented functions will be issued by compiler.
 
   ### Generation
 

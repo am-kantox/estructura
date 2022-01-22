@@ -81,50 +81,104 @@ defmodule Estructura.Hooks do
     [opening | clauses] ++ [closing]
   end
 
-  @spec coercion_ast(boolean() | [Cfg.key()], [Cfg.key()]) :: Macro.t()
-  defp coercion_ast(false, all_fields),
+  @spec coercion_ast(boolean() | [Cfg.key()], module(), [Cfg.key()]) :: Macro.t()
+  defp coercion_ast(false, _, all_fields),
     do: [
       quote do
+        @compile {:inline, coerce: 2}
         defp coerce(key, value) when key in unquote(all_fields), do: {:ok, value}
       end
     ]
 
-  defp coercion_ast(true, all_fields), do: coercion_ast(all_fields, all_fields)
+  defp coercion_ast(true, module, all_fields), do: coercion_ast(all_fields, module, all_fields)
 
-  defp coercion_ast(fields, all_fields) when is_list(fields) do
-    for key <- fields do
-      quote generated: true, location: :keep do
-        @doc "Coercion function to be called for `#{unquote(key)}` key when put through `put/3` and/or `Access`"
-        @spec unquote(:"coerce_#{key}")(any()) :: {:ok, any()} | {:error, any()}
-        def unquote(:"coerce_#{key}")(value), do: {:ok, value}
+  defp coercion_ast(fields, module, all_fields) when is_list(fields) do
+    coercible = Module.concat(module, Coercible)
 
-        defp coerce(unquote(key), value), do: unquote(:"coerce_#{key}")(value)
-        defoverridable [{unquote(:"coerce_#{key}"), 1}]
+    doc =
+      quote do
+        @moduledoc false
+        """
+        The behaviour for `#{inspect(unquote(module))}` specifying callbacks
+          to be implemented in it for coercion of particular fields.
+        """
       end
-    end ++ coercion_ast(false, all_fields)
+
+    callbacks =
+      for key <- fields do
+        quote generated: true, location: :keep do
+          @doc """
+          Coercion function to be called for `#{unquote(key)}` key
+            when put through `put/3` and/or `Access`
+          """
+          @callback unquote(:"coerce_#{key}")(value) :: {:ok, value} | {:error, value}
+                    when value: any()
+        end
+      end
+
+    Module.create(coercible, [doc | callbacks], __ENV__)
+
+    behaviour_clause = quote(do: @behaviour(unquote(coercible)))
+
+    coerce_clauses =
+      for key <- fields do
+        quote generated: true, location: :keep do
+          defp coerce(unquote(key), value),
+            do: apply(__MODULE__, unquote(:"coerce_#{key}"), [value])
+        end
+      end
+
+    [behaviour_clause | coerce_clauses] ++ coercion_ast(false, module, all_fields)
   end
 
-  @spec validation_ast(boolean() | [Cfg.key()], [Cfg.key()]) :: Macro.t()
-  defp validation_ast(false, all_fields),
+  @spec validation_ast(boolean() | [Cfg.key()], module(), [Cfg.key()]) :: Macro.t()
+  defp validation_ast(false, _, all_fields),
     do: [
       quote do
         defp validate(key, value) when key in unquote(all_fields), do: {:ok, value}
       end
     ]
 
-  defp validation_ast(true, all_fields), do: validation_ast(all_fields, all_fields)
+  defp validation_ast(true, module, all_fields),
+    do: validation_ast(all_fields, module, all_fields)
 
-  defp validation_ast(fields, all_fields) when is_list(fields) do
-    for key <- fields do
-      quote generated: true, location: :keep do
-        @doc "Validation function to be called for `#{unquote(key)}` key when put through `put/3` and/or `Access`"
-        @spec unquote(:"validate_#{key}")(any()) :: {:ok, any()} | {:error, any()}
-        def unquote(:"validate_#{key}")(value), do: {:ok, value}
+  defp validation_ast(fields, module, all_fields) when is_list(fields) do
+    validateable = Module.concat(module, Validatable)
 
-        defp validate(unquote(key), value), do: unquote(:"validate_#{key}")(value)
-        defoverridable [{unquote(:"validate_#{key}"), 1}]
+    doc =
+      quote do
+        @moduledoc false
+        """
+        The behaviour for `#{inspect(unquote(module))}` specifying callbacks
+          to be implemented in it for validation of particular fields.
+        """
       end
-    end ++ validation_ast(false, all_fields)
+
+    callbacks =
+      for key <- fields do
+        quote generated: true, location: :keep do
+          @doc """
+          Validation function to be called for `#{unquote(key)}` key
+            when put through `put/3` and/or `Access`
+          """
+          @callback unquote(:"validate_#{key}")(value) :: {:ok, value} | {:error, value}
+                    when value: any()
+        end
+      end
+
+    Module.create(validateable, [doc | callbacks], __ENV__)
+
+    behaviour_clause = quote(do: @behaviour(unquote(validateable)))
+
+    validate_clauses =
+      for key <- fields do
+        quote generated: true, location: :keep do
+          defp validate(unquote(key), value),
+            do: apply(__MODULE__, unquote(:"validate_#{key}"), [value])
+        end
+      end
+
+    [behaviour_clause | validate_clauses] ++ validation_ast(false, module, all_fields)
   end
 
   @spec enumerable_ast(boolean(), [Cfg.key()]) :: Macro.t()
@@ -363,8 +417,8 @@ defmodule Estructura.Hooks do
     config = Module.get_attribute(module, :__estructura__)
 
     access_ast = access_ast(config.access, fields)
-    coercion_ast = coercion_ast(config.access && config.coercion, fields)
-    validation_ast = validation_ast(config.access && config.validation, fields)
+    coercion_ast = coercion_ast(config.access && config.coercion, module, fields)
+    validation_ast = validation_ast(config.access && config.validation, module, fields)
 
     field = config.collectable
     if field && field not in fields, do: raise(KeyError, key: field, term: __MODULE__)

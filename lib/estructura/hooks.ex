@@ -320,10 +320,10 @@ defmodule Estructura.Hooks do
 
   if match?({:module, StreamData}, Code.ensure_compiled(StreamData)) do
     defp generator_ast([{_, _} | _] = types) do
-      quote generated: true, location: :keep, bind_quoted: [types: types] do
-        module = __MODULE__
+      fields = Keyword.keys(types)
 
-        @__generator__ %{types: types, fields: Keyword.keys(types)}
+      quote generated: true, location: :keep do
+        module = __MODULE__
 
         defp fix_gen(many) when is_list(many), do: Enum.map(many, &fix_gen/1)
 
@@ -354,7 +354,7 @@ defmodule Estructura.Hooks do
 
         defp generation_bound do
           args =
-            Enum.map(@__generator__.types, fn {arg, gen} ->
+            Enum.map(unquote(types), fn {arg, gen} ->
               {Macro.var(arg, nil), fix_gen(gen)}
             end)
 
@@ -365,10 +365,7 @@ defmodule Estructura.Hooks do
 
         defmacrop do_generation, do: generation_bound()
 
-        @doc """
-        Returns the generator to be used in `StreamData`-powered property testing, based
-          on the specification given to `use #{inspect(__MODULE__)}`.
-        """
+        @doc "See `#{inspect(__MODULE__)}.__generator__/1`"
         @spec __generator__() :: StreamData.t(%__MODULE__{})
         def __generator__, do: __generator__(%__MODULE__{})
 
@@ -386,7 +383,7 @@ defmodule Estructura.Hooks do
         def __generator__(%__MODULE__{} = this) do
           do_generation()
           |> StreamData.map(&Tuple.to_list/1)
-          |> StreamData.map(&Enum.zip(@__generator__.fields, &1))
+          |> StreamData.map(&Enum.zip(unquote(fields), &1))
           |> StreamData.map(&struct(this, &1))
         end
 
@@ -403,10 +400,6 @@ defmodule Estructura.Hooks do
     |> Module.get_attribute(:__struct__, %{})
     |> Map.delete(:__struct__)
     |> Map.keys()
-  end
-
-  def __after_compile__(_env, _bytecode) do
-    # IO.inspect(env.module.__struct__, label: "AFTER")
   end
 
   defmacro inject_estructura(env) do

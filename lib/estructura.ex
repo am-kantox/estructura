@@ -120,7 +120,6 @@ defmodule Estructura do
     quote do
       @__estructura__ struct!(Estructura.Config, unquote(opts))
 
-      # @after_compile Estructura.Hooks
       @before_compile {Estructura.Hooks, :inject_estructura}
     end
   end

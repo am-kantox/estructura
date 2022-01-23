@@ -16,6 +16,20 @@ defmodule EstructuraTest do
   @full %Full{}
   @void %Void{}
 
+  property "put/3" do
+    check all i <- string(?0..?9, min_length: 1) do
+      Full.put!(@full, :foo, i) == %Full{@full | foo: String.to_integer(i)}
+    end
+
+    assert_raise ArgumentError, ~r/42a is not a valid integer value/, fn ->
+      Full.put!(@full, :foo, "42a")
+    end
+
+    assert_raise KeyError, "key :not_a_field not found in: Estructura.Full", fn ->
+      Full.put!(@full, :not_a_field, 42)
+    end
+  end
+
   property "Access" do
     check all j <- integer(), i <- StreamData.constant(if(j < 0, do: -j, else: j)) do
       assert put_in(@full, [:foo], i) == %Full{@full | foo: i}
@@ -39,6 +53,10 @@ defmodule EstructuraTest do
     assert_raise UndefinedFunctionError,
                  ~r/Estructura.Void does not implement the Access behaviour/,
                  fn -> pop_in(@void, [:foo]) end
+
+    assert_raise KeyError, "key :not_a_field not found in: Estructura.Full", fn ->
+      put_in(@full, [:not_a_field], 42)
+    end
   end
 
   property "Coercion" do

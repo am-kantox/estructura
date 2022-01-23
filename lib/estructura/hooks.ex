@@ -12,11 +12,19 @@ defmodule Estructura.Hooks do
         @behaviour Access
 
         @doc """
-        Puts the value for the given key into the structure, passing coercion _and_ validation
+        Puts the value for the given key into the structure, passing coercion _and_ validation,
+          returns `{:ok, updated_struct}` or `{:error, reason}` if there is no such key
         """
         @spec put(%__MODULE__{}, Cfg.key(), any()) ::
                 {:ok, %__MODULE__{}} | {:error, any}
         def put(data, key, value)
+
+        @doc """
+        Puts the value for the given key into the structure, passing coercion _and_ validation,
+          returns the value or raises if there is no such key
+        """
+        @spec put(%__MODULE__{}, Cfg.key(), any()) :: %__MODULE__{} | no_return
+        def put!(data, key, value)
 
         @doc """
         Gets the value for the given key from the structure
@@ -34,6 +42,13 @@ defmodule Estructura.Hooks do
                  do: {:ok, %__MODULE__{data | unquote(key) => value}}
           end
 
+          def put!(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
+            case put(data, unquote(key), value) do
+              {:ok, updated_data} -> updated_data
+              {:error, reason} -> raise ArgumentError, reason
+            end
+          end
+
           def get(%__MODULE__{unquote(key) => value} = data, unquote(key), _), do: value
 
           @impl Access
@@ -46,14 +61,8 @@ defmodule Estructura.Hooks do
           @impl Access
           def get_and_update(%__MODULE__{unquote(key) => value} = data, unquote(key), fun) do
             case fun.(value) do
-              :pop ->
-                pop(data, unquote(key))
-
-              {current_value, new_value} ->
-                case put(data, unquote(key), new_value) do
-                  {:ok, new_value} -> {current_value, new_value}
-                  {:error, reason} -> raise ArgumentError, reason
-                end
+              :pop -> pop(data, unquote(key))
+              {current_value, new_value} -> {current_value, put!(data, unquote(key), new_value)}
             end
           end
         end
@@ -63,6 +72,9 @@ defmodule Estructura.Hooks do
       quote generated: true, location: :keep do
         def put(%__MODULE__{}, key, _),
           do: {:error, Exception.message(%KeyError{key: key, term: __MODULE__})}
+
+        def put!(%__MODULE__{}, key, _),
+          do: raise(KeyError, key: key, term: __MODULE__)
 
         def get(%__MODULE__{}, _key, default),
           do: default

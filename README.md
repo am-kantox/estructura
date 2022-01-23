@@ -14,8 +14,9 @@ end
 
 ## Changelog
 
-* `0.3.0` — `coercion` and `validation` are now injected as behaviours
-* `0.2.0` — `coercion`, `validation`, `put/3`
+* `0.3.2` — `put!/3`
+* `0.3.0` — `coercion` and `validation` are now injected as behaviours
+* `0.2.0` — `coercion`, `validation`, `put/3`
 
 ## [Documentation](https://hexdocs.pm/estructura)
 

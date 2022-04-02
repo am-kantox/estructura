@@ -7,10 +7,15 @@
 ```elixir
 def deps do
   [
-    {:estructura, "~> 0.1"}
+    {:estructura, "~> 0.1"},
+    # optionally you might want to add `boundary` library 
+    # it is used by `estructura` and many other projects
+    # more info: https://hexdocs.pm/boundary
+    {:boundary, "~> 0.9", runtime: false}
   ]
 end
 ```
+I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
 

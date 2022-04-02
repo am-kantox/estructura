@@ -15,7 +15,7 @@ def deps do
   ]
 end
 ```
-Also, add `boundary` as dependency since that is used in present project.
+I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
 

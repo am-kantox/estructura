@@ -7,10 +7,12 @@
 ```elixir
 def deps do
   [
-    {:estructura, "~> 0.1"}
+    {:estructura, "~> 0.1"},
+    {:boundary, "~> 0.9", runtime: false}
   ]
 end
 ```
+Also, add `boundary` as dependency since that is used in present project.
 
 ## Changelog
 

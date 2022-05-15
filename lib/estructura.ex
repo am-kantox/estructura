@@ -15,8 +15,9 @@ defmodule Estructura do
 
   `use Estructura` accepts four keyword arguments.
 
-    * `access: boolean()` whether to generate the `Access` implementation, default `true`; when `true`,
-      it also produces `put/3` and `get/3` methods to be used with `coercion` and `validation`
+    * `access: true | false | :lazy` whether to generate the `Access` implementation, default `true`;
+      when `true` or `:lazy`, it also produces `put/3` and `get/3` methods to be used with `coercion`
+      and `validation`, when `:lazy`, instances of `Estructura.Lazy` are understood as values
     * `coercion: boolean() | [key()]` whether to generate the bunch of `coerce_×××/1` functions
       to be overwritten by implementations, default `false`
     * `validation: boolean() | [key()]` whether to generate the bunch of `validate_×××/1` functions
@@ -141,8 +142,11 @@ defmodule Estructura do
   defmacro __using__(opts) do
     quote do
       @__estructura__ struct!(Estructura.Config, unquote(opts))
-
       @before_compile {Estructura.Hooks, :inject_estructura}
+      if @__estructura__.access == :lazy and
+           is_nil(Enum.find(Module.get_attribute(__MODULE__, :derive), &match?({Inspect, _}, &1))) do
+        @derive {Inspect, except: [:__lazy_data__]}
+      end
     end
   end
 end

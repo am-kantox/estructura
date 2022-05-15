@@ -6,9 +6,11 @@ defmodule Estructura.Hooks do
   @spec access_ast(boolean(), [Cfg.key()]) :: Macro.t()
   defp access_ast(false, _fields), do: []
 
-  defp access_ast(true, fields) when is_list(fields) do
+  defp access_ast(lazy?, fields) when lazy? in [true, :lazy] and is_list(fields) do
     opening =
       quote generated: true, location: :keep do
+        if unquote(lazy?) in [:lazy], do: alias(Estructura.Lazy)
+
         @behaviour Access
 
         @doc """
@@ -49,14 +51,75 @@ defmodule Estructura.Hooks do
             end
           end
 
-          def get(%__MODULE__{unquote(key) => value} = data, unquote(key), _), do: value
+          if unquote(lazy?) in [:lazy] do
+            def get(
+                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  unquote(key),
+                  default
+                ) do
+              with {:ok, value} <- Estructura.Lazy.apply(value, data),
+                   {:ok, data} <- put(data, unquote(key), value) do
+                get(data, unquote(key), default)
+              else
+                :error -> default
+              end
+            end
+          end
+
+          def get(%__MODULE__{unquote(key) => value}, unquote(key), _), do: value
+
+          if unquote(lazy?) in [:lazy] do
+            @impl Access
+            def fetch(
+                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  unquote(key)
+                ) do
+              with {:ok, value} <- Estructura.Lazy.apply(value, data),
+                   {:ok, data} <- put(data, unquote(key), value) do
+                fetch(data, unquote(key))
+              else
+                _ -> :error
+              end
+            end
+          end
 
           @impl Access
           def fetch(%__MODULE__{unquote(key) => value}, unquote(key)), do: {:ok, value}
 
+          if unquote(lazy?) in [:lazy] do
+            @impl Access
+            def pop(
+                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  unquote(key)
+                ) do
+              with {:ok, value} <- Estructura.Lazy.apply(value, data),
+                   {:ok, data} <- put(data, unquote(key), value) do
+                {value, data}
+              else
+                _ -> {nil, data}
+              end
+            end
+          end
+
           @impl Access
           def pop(%__MODULE__{unquote(key) => value} = data, unquote(key)),
             do: {value, %{data | unquote(key) => nil}}
+
+          if unquote(lazy?) in [:lazy] do
+            @impl Access
+            def get_and_update(
+                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  unquote(key),
+                  fun
+                ) do
+              with {:ok, value} <- Estructura.Lazy.apply(value, data),
+                   {:ok, data} <- put(data, unquote(key), value) do
+                get_and_update(data, unquote(key), fun)
+              else
+                _ -> {value, data}
+              end
+            end
+          end
 
           @impl Access
           def get_and_update(%__MODULE__{unquote(key) => value} = data, unquote(key), fun) do
@@ -212,11 +275,15 @@ defmodule Estructura.Hooks do
 
         def member?(%unquote(module){}, _), do: {:ok, false}
 
-        def slice(%unquote(module){} = s) do
-          size = unquote(count)
-          list = s |> Map.from_struct() |> :maps.to_list()
+        if function_exported?(Enumerable.List, :slice, 4) do
+          def slice(%unquote(module){} = s) do
+            size = unquote(count)
+            list = s |> Map.from_struct() |> :maps.to_list()
 
-          {:ok, size, &Enumerable.List.slice(list, &1, &2, size)}
+            {:ok, size, &Enumerable.List.slice(list, &1, &2, size)}
+          end
+        else
+          def slice(%unquote(module){}), do: {:error, __MODULE__}
         end
 
         def reduce(s, acc, fun) do
@@ -417,9 +484,21 @@ defmodule Estructura.Hooks do
   defmacro inject_estructura(env) do
     module = env.module
 
+    config = Module.get_attribute(module, :__estructura__)
+
     fields = fields(module)
 
-    config = Module.get_attribute(module, :__estructura__)
+    fields =
+      if config.access == :lazy do
+        if :__lazy_data__ in fields do
+          fields -- [:__lazy_data__]
+        else
+          raise CompileError,
+            description: "`:__lazy_data__` struct key must be defined for `access: :lazy` config"
+        end
+      else
+        fields
+      end
 
     access_ast = access_ast(config.access, fields)
     coercion_ast = coercion_ast(config.access && config.coercion, module, fields)

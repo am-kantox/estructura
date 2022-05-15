@@ -3,17 +3,19 @@ defmodule EstructuraTest do
   use ExUnitProperties
 
   doctest Estructura
+  doctest Estructura.Lazy
 
   alias Estructura.Collectable.Bitstring, as: ECB
   alias Estructura.Collectable.List, as: ECL
   alias Estructura.Collectable.Map, as: ECM
   alias Estructura.Collectable.MapSet, as: ECMS
 
-  alias Estructura.{Full, Void}
+  alias Estructura.{Full, LazyInst, Void}
 
   require Integer
 
   @full %Full{}
+  @lazy %LazyInst{}
   @void %Void{}
 
   property "put/3" do
@@ -106,5 +108,11 @@ defmodule EstructuraTest do
     end
 
     refute Void.__info__(:functions)[:__generate__]
+  end
+
+  test "lazy" do
+    assert %Estructura.Lazy{} = @lazy.foo
+    assert {42, data} = pop_in(@lazy, [:foo])
+    assert 42 = data.foo
   end
 end

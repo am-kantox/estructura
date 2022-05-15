@@ -11,6 +11,7 @@ defmodule EstructuraTest do
   alias Estructura.Collectable.MapSet, as: ECMS
 
   alias Estructura.{Full, LazyInst, Void}
+  alias Estructura.Lazy
 
   require Integer
 
@@ -111,8 +112,20 @@ defmodule EstructuraTest do
   end
 
   test "lazy" do
-    assert %Estructura.Lazy{} = @lazy.foo
-    assert {42, data} = pop_in(@lazy, [:foo])
-    assert 42 = data.foo
+    lazy = @lazy
+
+    assert %Lazy{} = lazy.foo
+    assert 42 = get_in(lazy, [:foo])
+    assert {42, data} = pop_in(lazy, [:foo])
+    assert %Lazy{value: {:ok, 42}} = data.foo
+
+    now = DateTime.utc_now()
+    {value1, lazy} = pop_in(lazy, [:bar])
+    assert DateTime.diff(value1, now, :millisecond) < 100
+    assert value1 == get_in(lazy, [:bar])
+    Process.sleep(110)
+    value2 = get_in(lazy, [:bar])
+    assert value1 != value2
+    assert DateTime.diff(value2, now, :millisecond) > 100
   end
 end

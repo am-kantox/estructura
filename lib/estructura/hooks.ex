@@ -9,7 +9,7 @@ defmodule Estructura.Hooks do
   defp access_ast(lazy?, fields) when lazy? in [true, :lazy] and is_list(fields) do
     opening =
       quote generated: true, location: :keep do
-        if unquote(lazy?) in [:lazy], do: alias(Estructura.Lazy)
+        alias Estructura.Lazy
 
         @behaviour Access
 
@@ -53,15 +53,13 @@ defmodule Estructura.Hooks do
 
           if unquote(lazy?) in [:lazy] do
             def get(
-                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  %__MODULE__{unquote(key) => %Lazy{} = value} = data,
                   unquote(key),
                   default
                 ) do
-              with {:ok, value} <- Estructura.Lazy.apply(value, data),
-                   {:ok, data} <- put(data, unquote(key), value) do
-                get(data, unquote(key), default)
-              else
-                :error -> default
+              case Lazy.apply(value, data) do
+                %Lazy{value: {:ok, value}} -> value
+                _ -> default
               end
             end
           end
@@ -71,13 +69,11 @@ defmodule Estructura.Hooks do
           if unquote(lazy?) in [:lazy] do
             @impl Access
             def fetch(
-                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  %__MODULE__{unquote(key) => %Lazy{} = value} = data,
                   unquote(key)
                 ) do
-              with {:ok, value} <- Estructura.Lazy.apply(value, data),
-                   {:ok, data} <- put(data, unquote(key), value) do
-                fetch(data, unquote(key))
-              else
+              case Lazy.apply(value, data) do
+                %Lazy{value: {:ok, value}} -> {:ok, value}
                 _ -> :error
               end
             end
@@ -89,14 +85,15 @@ defmodule Estructura.Hooks do
           if unquote(lazy?) in [:lazy] do
             @impl Access
             def pop(
-                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  %__MODULE__{unquote(key) => %Lazy{} = value} = data,
                   unquote(key)
                 ) do
-              with {:ok, value} <- Estructura.Lazy.apply(value, data),
-                   {:ok, data} <- put(data, unquote(key), value) do
-                {value, data}
-              else
-                _ -> {nil, data}
+              case Lazy.apply(value, data) do
+                %Lazy{value: {:ok, value}} = result ->
+                  {value, put!(data, unquote(key), Lazy.put(result, value))}
+
+                _ ->
+                  {nil, data}
               end
             end
           end
@@ -108,15 +105,22 @@ defmodule Estructura.Hooks do
           if unquote(lazy?) in [:lazy] do
             @impl Access
             def get_and_update(
-                  %__MODULE__{unquote(key) => %Estructura.Lazy{} = value} = data,
+                  %__MODULE__{unquote(key) => %Lazy{} = value} = data,
                   unquote(key),
                   fun
                 ) do
-              with {:ok, value} <- Estructura.Lazy.apply(value, data),
-                   {:ok, data} <- put(data, unquote(key), value) do
-                get_and_update(data, unquote(key), fun)
-              else
-                _ -> {value, data}
+              case Lazy.apply(value, data) do
+                %Lazy{value: {:ok, value}} = result ->
+                  case fun.(value) do
+                    :pop ->
+                      {value, result}
+
+                    {current_value, new_value} ->
+                      {current_value, put!(data, unquote(key), Lazy.put(result, new_value))}
+                  end
+
+                _ ->
+                  {nil, data}
               end
             end
           end

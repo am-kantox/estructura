@@ -9,11 +9,12 @@ defmodule Estructura.LazyInst do
   @moduledoc false
   use Estructura, access: :lazy
 
-  def parse_int(bin) do
-    with {int, _} <- Integer.parse(bin), do: {:ok, int}
-  end
+  def parse_int(bin), do: with {int, _} <- Integer.parse(bin), do: {:ok, int}
+  def current_time("42"), do: {:ok, DateTime.utc_now()}
 
-  defstruct __lazy_data__: "42", foo: Estructura.Lazy.new(&Estructura.LazyInst.parse_int/1)
+  defstruct __lazy_data__: "42",
+    foo: Estructura.Lazy.new(&Estructura.LazyInst.parse_int/1),
+    bar: Estructura.Lazy.new(&Estructura.LazyInst.current_time/1, 100)
 end
 
 defmodule Estructura.Full do

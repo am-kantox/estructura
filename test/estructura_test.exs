@@ -156,4 +156,13 @@ defmodule EstructuraTest do
     assert value1 != value2
     assert DateTime.diff(value2, now, :millisecond) > 100
   end
+
+  test "lazy staleness" do
+    {_now, lazy, [stale, recent]} =
+      with {dt, lazy} <- {DateTime.utc_now(), update_in(@lazy_map, [:bar], & &1)},
+           do: {dt, lazy, Enum.map(1..2, fn _ -> Process.sleep(50) && get_in(lazy, [:bar]) end)}
+
+    assert {:ok, ^stale} = lazy.data.bar.value
+    refute {:ok, recent} == lazy.data.bar.value
+  end
 end

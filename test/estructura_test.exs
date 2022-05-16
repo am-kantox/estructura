@@ -3,18 +3,30 @@ defmodule EstructuraTest do
   use ExUnitProperties
 
   doctest Estructura
+  doctest Estructura.Lazy
+  doctest Estructura.LazyMap
 
   alias Estructura.Collectable.Bitstring, as: ECB
   alias Estructura.Collectable.List, as: ECL
   alias Estructura.Collectable.Map, as: ECM
   alias Estructura.Collectable.MapSet, as: ECMS
 
-  alias Estructura.{Full, Void}
+  alias Estructura.{Full, LazyInst, Void}
+  alias Estructura.{Lazy, LazyMap}
 
   require Integer
 
   @full %Full{}
+  @lazy %LazyInst{}
   @void %Void{}
+
+  @lazy_map LazyMap.new(
+              [
+                foo: Estructura.Lazy.new(&Estructura.LazyInst.parse_int/1),
+                bar: Estructura.Lazy.new(&Estructura.LazyInst.current_time/1, 100)
+              ],
+              "42"
+            )
 
   property "put/3" do
     check all i <- string(?0..?9, min_length: 1) do
@@ -106,5 +118,51 @@ defmodule EstructuraTest do
     end
 
     refute Void.__info__(:functions)[:__generate__]
+  end
+
+  test "lazy" do
+    lazy = @lazy
+
+    assert %Lazy{} = lazy.foo
+    assert 42 = get_in(lazy, [:foo])
+    assert {42, data} = pop_in(lazy, [:foo])
+    assert %Lazy{value: {:ok, 42}} = data.foo
+
+    now = DateTime.utc_now()
+    {value1, lazy} = pop_in(lazy, [:bar])
+    assert DateTime.diff(value1, now, :millisecond) < 100
+    assert value1 == get_in(lazy, [:bar])
+    Process.sleep(110)
+    value2 = get_in(lazy, [:bar])
+    assert value1 != value2
+    assert DateTime.diff(value2, now, :millisecond) > 100
+  end
+
+  test "lazy map" do
+    lazy = @lazy_map
+
+    assert %Lazy{} = lazy.data.foo
+    assert 42 = get_in(lazy, [:foo])
+    assert %LazyMap{data: %{foo: %Lazy{value: {:ok, 84}}}} = update_in(lazy, [:foo], &(&1 * 2))
+
+    now = DateTime.utc_now()
+    value1 = get_in(lazy, [:bar])
+    assert DateTime.diff(value1, now, :millisecond) < 100
+    assert DateTime.diff(value1, get_in(lazy, [:bar]), :millisecond) < 100
+    assert value1 != get_in(lazy, [:bar])
+
+    Process.sleep(110)
+    value2 = get_in(lazy, [:bar])
+    assert value1 != value2
+    assert DateTime.diff(value2, now, :millisecond) > 100
+  end
+
+  test "lazy staleness" do
+    {_now, lazy, [stale, recent]} =
+      with {dt, lazy} <- {DateTime.utc_now(), update_in(@lazy_map, [:bar], & &1)},
+           do: {dt, lazy, Enum.map(1..2, fn _ -> Process.sleep(50) && get_in(lazy, [:bar]) end)}
+
+    assert {:ok, ^stale} = lazy.data.bar.value
+    refute {:ok, recent} == lazy.data.bar.value
   end
 end

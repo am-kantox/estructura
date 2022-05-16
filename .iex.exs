@@ -24,3 +24,6 @@ alias Estructura.Collectable.MapSet, as: ECMS
 
 alias Estructura.Full, as: F
 alias Estructura.Void, as: V
+alias Estructura.LazyInst, as: L
+
+alias Estructura.{Lazy, LazyMap}

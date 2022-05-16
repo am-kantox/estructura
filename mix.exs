@@ -46,7 +46,7 @@ defmodule Estructura.MixProject do
   defp deps do
     [
       {:stream_data, "~> 0.5", only: [:dev, :test], optional: true},
-      {:boundary, "~> 0.4", only: [:dev, :test, :ci], runtime: false},
+      {:boundary, "~> 0.4", runtime: false},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},
       {:dialyxir, "~> 1.0", only: [:dev, :test, :ci], runtime: false},
@@ -92,7 +92,14 @@ defmodule Estructura.MixProject do
       logo: "stuff/#{@app}-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
       extras: ~w[README.md],
-      groups_for_modules: []
+      groups_for_modules: [
+        Estructura,
+        Estructura.Config,
+        Lazy: [
+          Estructura.Lazy,
+          Estructura.LazyMap
+        ]
+      ]
     ]
   end
 

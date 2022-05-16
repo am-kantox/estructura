@@ -93,8 +93,8 @@ defmodule Estructura.MixProject do
       source_url: "https://github.com/am-kantox/#{@app}",
       extras: ~w[README.md],
       groups_for_modules: [
-        Estructura,
-        Estructura.Config,
+        # Estructura,
+        # Estructura.Config,
         Lazy: [
           Estructura.Lazy,
           Estructura.LazyMap

@@ -1,6 +1,6 @@
 defmodule Estructura.Lazy do
   @moduledoc """
-  The field stub allowing lazy instantiation of `Estructura` fields
+  The field stub allowing lazy instantiation of `Estructura` fields.
   """
 
   use Boundary

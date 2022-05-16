@@ -167,7 +167,7 @@ defmodule Estructura do
   # unzip and return the value, alter the struct with it
   ```
 
-  See `Estructura.Lazy` for details and options, see ``Estructura.LazyMap` for
+  See `Estructura.Lazy` for details and options, see `Estructura.LazyMap` for
   the implementation of lazy map.
   """
 

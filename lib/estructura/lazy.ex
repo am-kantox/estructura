@@ -42,7 +42,7 @@ defmodule Estructura.Lazy do
 
       iex> lazy = Estructura.Lazy.new(&System.fetch_env/1)
       ...> Estructura.Lazy.apply(lazy, "LANG").value
-      {:ok, "es_ES.UTF-8"}
+      System.fetch_env("LANG")
   """
   def apply(%Lazy{expires_in: :never, timestamp: timestamp} = lazy, %{__lazy_data__: _data})
       when not is_nil(timestamp),

@@ -134,6 +134,41 @@ defmodule Estructura do
     end
   end
   ```
+
+  ### Lazy
+
+  If `access: :lazy` is passed as an option, the struct content might be instantiated lazily,
+  upon first access through `Kernel.×××_in/{2,3}` family.
+
+  This might be explicitly helpful when the real content requires a significant time
+  to load and/or store. Consider the full response from the web server, including
+  the gzipped content, which might in turn be a huge text file. Or an attachment to an email.
+
+  Instead of unarchiving the content, one might use `Lazy` as
+
+  ```elixir
+  defmodule Response do
+    @moduledoc false
+    use Estructura, access: :lazy
+
+    def extract(file), do: {:ok, ZipHelper.unzip(file)}
+
+   defstruct __lazy_data__: nil,
+     file: Estructura.Lazy.new(&Response.extract/1)
+  end
+
+  response = %Response{__lazy_data__: zipped_content}
+  # immediate response
+
+  response |> get_in([:file])
+  # unzip and return
+
+  {unzipped, struct_with_cached_value} = response |> pop_in([:file])
+  # unzip and return the value, alter the struct with it
+  ```
+
+  See `Estructura.Lazy` for details and options, see ``Estructura.LazyMap` for
+  the implementation of lazy map.
   """
 
   use Boundary

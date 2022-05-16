@@ -34,7 +34,7 @@ defmodule Estructura.Lazy do
   def new(getter, expires_in \\ :never) when is_function(getter, 1),
     do: struct!(__MODULE__, getter: getter, expires_in: expires_in)
 
-  @spec apply(t(), %{__lazy_data__: term()}) :: t()
+  @spec apply(t(), %{__lazy_data__: term()} | term()) :: t()
   @doc """
   Apply the lazy getter to the data passed as an argument
 

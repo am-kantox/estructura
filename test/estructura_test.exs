@@ -165,4 +165,15 @@ defmodule EstructuraTest do
     assert {:ok, ^stale} = lazy.data.bar.value
     refute {:ok, recent} == lazy.data.bar.value
   end
+
+  test "LazyMap.keys/1" do
+    assert [:bar, :foo] = LazyMap.keys(@lazy_map)
+  end
+
+  test "LazyMap.fetch_all/1" do
+    assert {%{bar: %DateTime{} = dt, foo: 42},
+            %Estructura.LazyMap{
+              data: %{bar: %Lazy{value: {:ok, %DateTime{} = dt}}, foo: %Lazy{value: {:ok, 42}}}
+            }} = LazyMap.fetch_all(@lazy_map)
+  end
 end

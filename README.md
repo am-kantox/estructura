@@ -19,6 +19,7 @@ I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since
 
 ## Changelog
 
+* `0.4.1` — `Estructura.LazyMap.keys/1`, `Estructura.LazyMap.fetch_all/1`
 * `0.4.0` — `Estructura.Lazy`, `Estructura.LazyMap`
 * `0.3.2` — `put!/3`
 * `0.3.0` — `coercion` and `validation` are now injected as behaviours

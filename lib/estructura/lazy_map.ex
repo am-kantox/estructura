@@ -29,7 +29,7 @@ defmodule Estructura.LazyMap do
   def fetch(%__MODULE__{data: %{} = data} = this, key) when is_map_key(data, key) do
     case Map.get(data, key) do
       %Lazy{} = value ->
-        case Lazy.apply(value, this) do
+        case Lazy.apply(value, this, key) do
           %Lazy{value: {:ok, value}} -> {:ok, value}
           _ -> :error
         end
@@ -47,7 +47,7 @@ defmodule Estructura.LazyMap do
   def pop(%__MODULE__{data: %{} = data} = this, key) when is_map_key(data, key) do
     case Map.get(data, key) do
       %Lazy{} = value ->
-        case Lazy.apply(value, this) do
+        case Lazy.apply(value, this, key) do
           %Lazy{value: {:ok, value}} ->
             {value, %__MODULE__{this | data: Map.delete(data, key)}}
 
@@ -68,7 +68,7 @@ defmodule Estructura.LazyMap do
   def get_and_update(%__MODULE__{data: %{} = data} = this, key, fun) do
     case Map.get(data, key) do
       %Lazy{} = value ->
-        case Lazy.apply(value, this) do
+        case Lazy.apply(value, this, key) do
           %Lazy{value: {:ok, value}} = result ->
             case fun.(value) do
               :pop ->
@@ -105,6 +105,23 @@ defmodule Estructura.LazyMap do
   def new(initial \\ %{}, lazy_data \\ nil)
   def new(kw, lazy_data) when is_list(kw), do: kw |> Map.new() |> new(lazy_data)
   def new(%{} = map, lazy_data), do: %__MODULE__{data: map, __lazy_data__: lazy_data}
+
+  @spec keys(t()) :: [Map.key()]
+  @doc "Returns all the keys of the underlying map"
+  @doc since: "0.4.1"
+  def keys(%__MODULE__{data: data}), do: Map.keys(data)
+
+  @spec fetch_all(t()) :: t()
+  @doc "Eagerly instantiates the data"
+  @doc since: "0.4.1"
+  def fetch_all(%__MODULE__{} = lazy) do
+    lazy
+    |> keys()
+    |> Enum.reduce({%{}, lazy}, fn key, {result, lazy} ->
+      {value, lazy} = get_and_update(lazy, key, &{&1, &1})
+      {Map.put(result, key, value), lazy}
+    end)
+  end
 
   defimpl Inspect do
     @moduledoc false

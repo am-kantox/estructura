@@ -25,7 +25,7 @@ defmodule Estructura.Hooks do
         Puts the value for the given key into the structure, passing coercion _and_ validation,
           returns the value or raises if there is no such key
         """
-        @spec put(%__MODULE__{}, Cfg.key(), any()) :: %__MODULE__{} | no_return
+        @spec put!(%__MODULE__{}, Cfg.key(), any()) :: %__MODULE__{} | no_return
         def put!(data, key, value)
 
         @doc """

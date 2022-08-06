@@ -63,7 +63,7 @@ defmodule Estructura.LazyMap do
   def pop(%__MODULE__{data: %{}} = this, _), do: {nil, this}
 
   @impl Access
-  def get_and_update(lazy, key, fun)
+  def get_and_update(lazy, key, fun \\ &{&1, &1})
 
   def get_and_update(%__MODULE__{data: %{} = data} = this, key, fun) do
     case Map.get(data, key) do

@@ -84,21 +84,28 @@ defmodule Estructura.User do
   }
 
   coerce do
-    def data.age(age) when is_float(age), do: age
-    def data.age(age) when is_integer(age), do: 1.0 * age
+    def data.age(age) when is_float(age), do: {:ok, age}
+    def data.age(age) when is_integer(age), do: {:ok, 1.0 * age}
     def data.age(age) when is_binary(age) do
       age
       |> Float.parse()
       |> case do
-        {age, ""} -> age
-        {age, _rest} -> age
-        :error -> 0.0
+        {age, ""} -> {:ok, age}
+        {age, _rest} -> {:ok, age}
+        :error -> {:ok, 0.0}
       end
     end
   end
 
   validate do
-    def address.street.house(house), do: match?({_, _}, Integer.parse(house))
+    def address.street.house(house) do
+      house
+      |> Integer.parse()
+      |> case do
+        {_value, _} -> {:ok, house}
+        _ -> {:error, "Wrong house value: " <> inspect(house)}
+      end
+    end
   end
 end
 

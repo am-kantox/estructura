@@ -84,26 +84,31 @@ defmodule Estructura.Nested do
         |> slice(name, subslice, impls)
       end
 
-    simple =
-      Enum.reduce(fields, %{}, fn
+    all =
+      fields
+      |> Enum.reduce(%{}, fn
         {_, %{}}, acc -> acc
         {name, type}, acc -> Map.put(acc, name, {:simple, type})
       end)
-
-    ast = module_ast(Map.merge(complex, simple), impl)
+      |> Map.merge(complex)
 
     if is_nil(name) do
-      ast
+      module_ast(module, all, impl)
     else
-      Module.create(module, ast, __ENV__)
+      Module.create(module, module_ast(all, impl), __ENV__)
       {name, {:estructura, module}}
     end
   end
 
-  @doc false
+  defp coercions_and_validations(funs) do
+    {
+      for({:coerce, fun} <- funs, uniq: true, do: fun),
+      for({:validate, fun} <- funs, uniq: true, do: fun)
+    }
+  end
+
   def module_ast(fields, %{funs: funs, defs: defs}) do
-    coercions = for {:coerce, fun} <- funs, uniq: true, do: fun
-    validations = for {:validate, fun} <- funs, uniq: true, do: fun
+    {coercions, validations} = coercions_and_validations(funs)
 
     quote do
       use Estructura, access: true, coercion: unquote(coercions), validation: unquote(validations)
@@ -115,10 +120,34 @@ defmodule Estructura.Nested do
       #   zzz: &Estructura.Full.zzz_generator/0
       # ]
 
-      defstruct Map.keys(unquote(Macro.escape(fields)))
+      struct =
+        Enum.map(unquote(Macro.escape(fields)), fn
+          {name, {:simple, _type}} -> {name, nil}
+          {name, {:estructura, module}} -> {name, struct!(module, [])}
+        end)
+      defstruct struct
 
       unquote(defs)
     end
+  end
+
+  @doc false
+  def module_ast(module, fields, %{funs: funs, defs: defs}) do
+    {coercions, validations} = coercions_and_validations(funs)
+
+    require Estructura.Hooks
+
+    [quote do
+      struct =
+        Enum.map(unquote(Macro.escape(fields)), fn
+          {name, {:simple, _type}} -> {name, nil}
+          {name, {:estructura, module}} -> {name, struct!(module, [])}
+        end)
+      defstruct struct
+
+      unquote(defs)
+    end] ++
+    Estructura.Hooks.estructura_ast(module, struct!(Estructura.Config, access: true, coercion: coercions, validation: validations), Map.keys(fields))
   end
 
   @doc false

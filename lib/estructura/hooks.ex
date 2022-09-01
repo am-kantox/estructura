@@ -490,12 +490,12 @@ defmodule Estructura.Hooks do
   end
 
   defmacro inject_estructura(env) do
-    module = env.module
+    config = Module.get_attribute(env.module, :__estructura__)
+    estructura_ast(env.module, config, fields(env.module))
+  end
 
-    config = Module.get_attribute(module, :__estructura__)
-
-    fields = fields(module)
-
+  @doc false
+  def estructura_ast(module, config, fields) do
     fields =
       if config.access == :lazy do
         if :__lazy_data__ in fields do

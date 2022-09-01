@@ -125,6 +125,7 @@ defmodule Estructura.Nested do
           {name, {:simple, _type}} -> {name, nil}
           {name, {:estructura, module}} -> {name, struct!(module, [])}
         end)
+
       defstruct struct
 
       unquote(defs)
@@ -137,17 +138,24 @@ defmodule Estructura.Nested do
 
     require Estructura.Hooks
 
-    [quote do
-      struct =
-        Enum.map(unquote(Macro.escape(fields)), fn
-          {name, {:simple, _type}} -> {name, nil}
-          {name, {:estructura, module}} -> {name, struct!(module, [])}
-        end)
-      defstruct struct
+    [
+      quote do
+        struct =
+          Enum.map(unquote(Macro.escape(fields)), fn
+            {name, {:simple, _type}} -> {name, nil}
+            {name, {:estructura, module}} -> {name, struct!(module, [])}
+          end)
 
-      unquote(defs)
-    end] ++
-    Estructura.Hooks.estructura_ast(module, struct!(Estructura.Config, access: true, coercion: coercions, validation: validations), Map.keys(fields))
+        defstruct struct
+
+        unquote(defs)
+      end
+    ] ++
+      Estructura.Hooks.estructura_ast(
+        module,
+        struct!(Estructura.Config, access: true, coercion: coercions, validation: validations),
+        Map.keys(fields)
+      )
   end
 
   @doc false

@@ -64,98 +64,11 @@ defmodule Estructura.Nested do
         acc ->
           acc
           |> Map.put_new(module, %{funs: [], defs: []})
-          # NB reverse order in which functions were declared!
-          |> update_in([module, :defs], &[def | &1])
-          # NB reverse order in which functions were declared!
-          |> update_in([module, :funs], &[fun | &1])
+          |> update_in([module, :defs], &(&1 ++ [def]))
+          |> update_in([module, :funs], &(&1 ++ [fun]))
       end
 
     slice(env.module, nil, shape, impls)
-  end
-
-  @doc false
-  def slice(module, name, %{} = fields, impls) do
-    impl = Map.get(impls, module, %{funs: [], defs: []})
-
-    complex =
-      for {name, %{} = subslice} <- fields, into: %{} do
-        module
-        |> Module.concat(name |> to_string() |> Macro.camelize())
-        |> slice(name, subslice, impls)
-      end
-
-    all =
-      fields
-      |> Enum.reduce(%{}, fn
-        {_, %{}}, acc -> acc
-        {name, type}, acc -> Map.put(acc, name, {:simple, type})
-      end)
-      |> Map.merge(complex)
-
-    if is_nil(name) do
-      module_ast(module, all, impl)
-    else
-      Module.create(module, module_ast(all, impl), __ENV__)
-      {name, {:estructura, module}}
-    end
-  end
-
-  defp coercions_and_validations(funs) do
-    {
-      for({:coerce, fun} <- funs, uniq: true, do: fun),
-      for({:validate, fun} <- funs, uniq: true, do: fun)
-    }
-  end
-
-  def module_ast(fields, %{funs: funs, defs: defs}) do
-    {coercions, validations} = coercions_and_validations(funs)
-
-    quote do
-      use Estructura, access: true, coercion: unquote(coercions), validation: unquote(validations)
-      # generator: [
-      #   foo: {StreamData, :integer, []},
-      #   bar: {StreamData, :string, [:alphanumeric]},
-      #   baz: {StreamData, :fixed_map,
-      #     [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]},
-      #   zzz: &Estructura.Full.zzz_generator/0
-      # ]
-
-      struct =
-        Enum.map(unquote(Macro.escape(fields)), fn
-          {name, {:simple, _type}} -> {name, nil}
-          {name, {:estructura, module}} -> {name, struct!(module, [])}
-        end)
-
-      defstruct struct
-
-      unquote(defs)
-    end
-  end
-
-  @doc false
-  def module_ast(module, fields, %{funs: funs, defs: defs}) do
-    {coercions, validations} = coercions_and_validations(funs)
-
-    require Estructura.Hooks
-
-    [
-      quote do
-        struct =
-          Enum.map(unquote(Macro.escape(fields)), fn
-            {name, {:simple, _type}} -> {name, nil}
-            {name, {:estructura, module}} -> {name, struct!(module, [])}
-          end)
-
-        defstruct struct
-
-        unquote(defs)
-      end
-    ] ++
-      Estructura.Hooks.estructura_ast(
-        module,
-        struct!(Estructura.Config, access: true, coercion: coercions, validation: validations),
-        Map.keys(fields)
-      )
   end
 
   @doc false
@@ -189,6 +102,89 @@ defmodule Estructura.Nested do
        {:@, meta, [{:impl, [], [true]}]},
        {:def, meta, [{:when, when_meta, [{:"#{action}_#{def}", submeta, args}, guard]} | rest]}
      ]}
+  end
+
+  defp slice(module, name, %{} = fields, impls) do
+    impl = Map.get(impls, module, %{funs: [], defs: []})
+
+    complex =
+      for {name, %{} = subslice} <- fields, into: %{} do
+        module
+        |> Module.concat(name |> to_string() |> Macro.camelize())
+        |> slice(name, subslice, impls)
+      end
+
+    all =
+      fields
+      |> Enum.reduce(%{}, fn
+        {_, %{}}, acc -> acc
+        {name, type}, acc -> Map.put(acc, name, {:simple, type})
+      end)
+      |> Map.merge(complex)
+
+    if is_nil(name) do
+      module_ast(module, all, impl)
+    else
+      Module.create(module, module_ast(module, all, impl), __ENV__)
+      {name, {:estructura, module}}
+    end
+  end
+
+  defp coercions_and_validations(funs) do
+    {
+      for({:coerce, fun} <- funs, uniq: true, do: fun),
+      for({:validate, fun} <- funs, uniq: true, do: fun)
+    }
+  end
+
+  defp struct_ast(fields) do
+    Enum.map(fields, fn
+      {name, {:simple, _type}} -> {name, nil}
+      {name, {:estructura, module}} -> {name, struct!(module, [])}
+    end)
+  end
+
+  defp generator_ast(fields) do
+    Enum.map(fields, fn
+      {name, {:simple, type}} -> {name, stream_data_type_for(type)}
+      {name, {:estructura, module}} -> {name, {module, :__generator__, []}}
+    end)
+  end
+
+  defp stream_data_type_for({:string, kind}),
+    do: {StreamData, :string, [kind]}
+
+  defp stream_data_type_for(:string),
+    do: stream_data_type_for({:string, :alphanumeric})
+
+  defp stream_data_type_for(type) when is_atom(type),
+    do: {StreamData, type, []}
+
+  defp stream_data_type_for({_, _, _} = type),
+    do: type
+
+  # AST for the module which is currently being created
+  defp module_ast(module, fields, %{funs: funs, defs: defs}) do
+    {coercions, validations} = coercions_and_validations(funs)
+    struct = struct_ast(fields)
+    generator = generator_ast(fields)
+
+    [
+      quote do
+        defstruct unquote(Macro.escape(struct))
+        unquote(defs)
+      end
+      | Estructura.Hooks.estructura_ast(
+          module,
+          struct!(Estructura.Config,
+            access: true,
+            coercion: coercions,
+            validation: validations,
+            generator: generator
+          ),
+          Map.keys(fields)
+        )
+    ]
   end
 
   @doc false

@@ -19,7 +19,8 @@ I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since
 
 ## Changelog
 
-* `0.4.2` — [BUG] Fixed wrong spec for `Estructura.put!/3`
+* `0.5.0` — `Estructura.Nested` for nested structures with validation, coercion, and generation
+* `0.4.2` — [BUG] Fixed wrong spec for `put!/3`
 * `0.4.1` — `Estructura.LazyMap.keys/1`, `Estructura.LazyMap.fetch_all/1`
 * `0.4.0` — `Estructura.Lazy`, `Estructura.LazyMap`
 * `0.3.2` — `put!/3`

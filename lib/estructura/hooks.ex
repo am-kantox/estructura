@@ -171,6 +171,8 @@ defmodule Estructura.Hooks do
 
   defp coercion_ast(true, module, all_fields), do: coercion_ast(all_fields, module, all_fields)
 
+  defp coercion_ast([], module, all_fields), do: coercion_ast(false, module, all_fields)
+
   defp coercion_ast(fields, module, all_fields) when is_list(fields) do
     coercible = Module.concat(module, Coercible)
 
@@ -220,6 +222,8 @@ defmodule Estructura.Hooks do
 
   defp validation_ast(true, module, all_fields),
     do: validation_ast(all_fields, module, all_fields)
+
+  defp validation_ast([], module, all_fields), do: validation_ast(false, module, all_fields)
 
   defp validation_ast(fields, module, all_fields) when is_list(fields) do
     validateable = Module.concat(module, Validatable)
@@ -486,12 +490,12 @@ defmodule Estructura.Hooks do
   end
 
   defmacro inject_estructura(env) do
-    module = env.module
+    config = Module.get_attribute(env.module, :__estructura__)
+    estructura_ast(env.module, config, fields(env.module))
+  end
 
-    config = Module.get_attribute(module, :__estructura__)
-
-    fields = fields(module)
-
+  @doc false
+  def estructura_ast(module, config, fields) do
     fields =
       if config.access == :lazy do
         if :__lazy_data__ in fields do

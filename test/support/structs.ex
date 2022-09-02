@@ -72,6 +72,36 @@ defmodule Estructura.Collectable.List do
   defstruct into: []
 end
 
+defmodule Estructura.User do
+  @moduledoc false
+
+  use Estructura.Nested
+
+  shape %{
+    name: :string,
+    address: %{city: :string, street: %{name: [:string], house: :string}},
+    data: %{age: :float}
+  }
+
+  coerce do
+    def data.age(age) when is_float(age), do: {:ok, age}
+    def data.age(age) when is_integer(age), do: {:ok, 1.0 * age}
+    def data.age(age) when is_binary(age) do
+      age
+      |> Float.parse()
+      |> case do
+        {age, ""} -> {:ok, age}
+        {age, _rest} -> {:ok, age}
+        :error -> {:ok, 0.0}
+      end
+    end
+  end
+
+  validate do
+    def address.street.house(house), do: {:ok, house}
+  end
+end
+
 defmodule Estructura.Collectable.Map do
   @moduledoc false
   use Estructura, collectable: :into

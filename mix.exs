@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "0.4.2"
+  @version "0.5.0"
 
   def project do
     [
@@ -46,6 +46,7 @@ defmodule Estructura.MixProject do
   defp deps do
     [
       {:stream_data, "~> 0.5", only: [:ci, :dev, :test], optional: true},
+      {:jason, "~> 1.0", only: [:ci, :dev, :test], optional: true},
       {:boundary, "~> 0.4", runtime: false},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},
@@ -94,10 +95,16 @@ defmodule Estructura.MixProject do
       extras: ~w[README.md],
       groups_for_modules: [
         # Estructura,
-        # Estructura.Config,
+        # Estructura.Nested,
         Lazy: [
           Estructura.Lazy,
           Estructura.LazyMap
+        ],
+        Internals: [
+          Estructura.Config
+        ],
+        Examples: [
+          Estructura.Full
         ]
       ]
     ]

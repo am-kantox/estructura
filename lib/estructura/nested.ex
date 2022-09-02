@@ -33,10 +33,11 @@ defmodule Estructura.Nested do
   @doc """
   Declares the shape of the target nested map. the values might be:
 
+  - `:string` | `:integer` or another simple `type` understood by
+    [`StreamData`](https://hexdocs.pm/stream_data/StreamData.html#functions)
+  - `[type]` to declare a list of elements of a single `type`
   - `map` to declare a nesting level; in such a case, the module with the FQN
     is created, carrying the struct of the same behaviour
-  - `:string` | `:integer` or another function understood by
-    [`StreamData`](https://hexdocs.pm/stream_data/StreamData.html#functions)
   - `mfa` tuple pointing out to the generator for this value
 
   ## Example
@@ -227,12 +228,16 @@ defmodule Estructura.Nested do
     end)
   end
 
-  @spec stream_data_type_for(simple_type_variants()) :: mfargs()
+  @spec stream_data_type_for(simple_type_variants() | [simple_type_variants()]) :: mfargs()
   defp stream_data_type_for({:string, kind}),
     do: {StreamData, :string, [kind]}
 
   defp stream_data_type_for(:string),
     do: stream_data_type_for({:string, :alphanumeric})
+
+  defp stream_data_type_for([type]) do
+    stream_data_type_for({StreamData, :list_of, [stream_data_type_for(type)]})
+  end
 
   defp stream_data_type_for(type) when is_atom(type),
     do: {StreamData, type, []}

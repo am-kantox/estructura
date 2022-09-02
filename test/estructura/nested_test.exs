@@ -36,7 +36,8 @@ defmodule Estructura.Nested.Test do
     check all %User{} = user <- User.__generator__() do
       assert is_binary(user.name)
       assert is_binary(user.address.city)
-      assert is_binary(user.address.street.name)
+      assert is_list(user.address.street.name)
+      assert Enum.all?(user.address.street.name, &is_binary/1)
       assert is_binary(user.address.street.house)
       assert is_float(user.data.age)
     end

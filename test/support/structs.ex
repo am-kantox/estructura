@@ -79,7 +79,7 @@ defmodule Estructura.User do
 
   shape %{
     name: :string,
-    address: %{city: :string, street: %{name: :string, house: :string}},
+    address: %{city: :string, street: %{name: [:string], house: :string}},
     data: %{age: :float}
   }
 

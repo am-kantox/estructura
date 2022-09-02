@@ -6,6 +6,15 @@ defmodule Estructura.Nested do
 
   @actions ~w|coerce validate generate|a
 
+  @typep action :: :coerce | :validate | :generate
+  @typep functions :: [{:coerce, atom()} | {:validate, atom()} | {:generate, atom()}]
+  @typep definitions :: %{defs: Macro.input(), funs: functions()}
+  @typep mfargs :: {module(), atom(), list()}
+  @typep simple_type_variants :: atom() | {atom(), any()} | mfargs()
+  @typep simple_type :: {:simple, simple_type_variants()}
+  @typep estructura_type :: {:estructura, module()}
+  @typep shape :: %{required(atom()) => simple_type() | estructura_type()}
+
   @doc false
   defmacro __using__(opts \\ []) do
     quote generated: true, location: :keep, bind_quoted: [opts: opts] do
@@ -21,7 +30,44 @@ defmodule Estructura.Nested do
     end
   end
 
-  @doc false
+  @doc """
+  Declares the shape of the target nested map. the values might be:
+
+  - `map` to declare a nesting level; in such a case, the module with the FQN
+    is created, carrying the struct of the same behaviour
+  - `:string` | `:integer` or another function understood by
+    [`StreamData`](https://hexdocs.pm/stream_data/StreamData.html#functions)
+  - `mfa` tuple pointing out to the generator for this value
+
+  ## Example
+
+  ```elixir
+  defmodule User do
+    use Estructura.Nested
+    shape %{
+      name: :string,
+      address: %{city: :string, street: %{name: :string, house: :string}},
+      data: %{age: :float}
+    }
+  end
+
+  %User{}
+  ```
+
+  would result in
+
+  ```elixir
+  %User{
+    address: %User.Address{
+      city: nil,
+      street: %User.Address.Street{house: nil, name: nil}
+    },
+    data: %User.Data{age: nil},
+    name: nil
+    }
+  ```
+
+  """
   defmacro shape(opts) do
     quote generated: true, location: :keep, bind_quoted: [opts: opts] do
       nested = Module.get_attribute(__MODULE__, :__estructura_nested__)
@@ -30,7 +76,28 @@ defmodule Estructura.Nested do
   end
 
   Enum.each(@actions, fn name ->
-    @doc false
+    @doc """
+    DSL helper to produce **`#{name}`** callbacks. The syntax is kinda weird,
+      but bear with it, please.
+
+    It known to produce warnings in `credo`, I’m working on it.
+
+    ```elixir
+    coerce do
+      def data.age(age) when is_float(age), do: {:ok, age}
+      def data.age(age) when is_integer(age), do: {:ok, 1.0 * age}
+      def data.age(age) when is_binary(age), do: {:ok, String.to_float(age)}
+      def data.age(age), do: {:error, "Could not cast \#{inspect(age)} to float"}
+    end
+
+    validate do
+      def address.street.postal_code(<<?0, code::binary-size(4)>>),
+        do: {:ok, code}
+      def address.street.postal_code(code),
+        do: {:error, "Not a postal code (\#{inspect(code)})"}
+    end
+    ```
+    """
     defmacro unquote(name)(opts) do
       name = unquote(name)
       opts = Macro.escape(opts)
@@ -72,11 +139,15 @@ defmodule Estructura.Nested do
   end
 
   @doc false
+  @spec normalize(Macro.input()) :: Macro.input()
   def normalize(do: block), do: normalize(block)
   def normalize({:__block__, [], clauses}), do: clauses
   def normalize(clauses), do: List.wrap(clauses)
 
   @doc false
+  @spec reshape(Macro.input(), action(), module()) ::
+          {module(), {action(), atom()}, Macro.output()}
+          | [{module(), {action(), atom()}, Macro.output()}]
   def reshape(defs, action, module) when is_list(defs),
     do: Enum.map(defs, &reshape(&1, action, module))
 
@@ -104,6 +175,8 @@ defmodule Estructura.Nested do
      ]}
   end
 
+  @spec slice(module(), atom(), map(), %{required(module()) => definitions()}) ::
+          Macro.output() | {atom(), {:estructura, module()}}
   defp slice(module, name, %{} = fields, impls) do
     impl = Map.get(impls, module, %{funs: [], defs: []})
 
@@ -130,6 +203,7 @@ defmodule Estructura.Nested do
     end
   end
 
+  @spec coercions_and_validations(functions()) :: {[atom()], [atom()]}
   defp coercions_and_validations(funs) do
     {
       for({:coerce, fun} <- funs, uniq: true, do: fun),
@@ -137,6 +211,7 @@ defmodule Estructura.Nested do
     }
   end
 
+  @spec struct_ast(shape()) :: [{atom(), nil | struct()}]
   defp struct_ast(fields) do
     Enum.map(fields, fn
       {name, {:simple, _type}} -> {name, nil}
@@ -144,6 +219,7 @@ defmodule Estructura.Nested do
     end)
   end
 
+  @spec generator_ast(shape()) :: [{atom(), mfargs()}]
   defp generator_ast(fields) do
     Enum.map(fields, fn
       {name, {:simple, type}} -> {name, stream_data_type_for(type)}
@@ -151,6 +227,7 @@ defmodule Estructura.Nested do
     end)
   end
 
+  @spec stream_data_type_for(simple_type_variants()) :: mfargs()
   defp stream_data_type_for({:string, kind}),
     do: {StreamData, :string, [kind]}
 
@@ -163,7 +240,7 @@ defmodule Estructura.Nested do
   defp stream_data_type_for({_, _, _} = type),
     do: type
 
-  # AST for the module which is currently being created
+  @spec module_ast(module(), shape(), definitions()) :: Macro.output()
   defp module_ast(module, fields, %{funs: funs, defs: defs}) do
     {coercions, validations} = coercions_and_validations(funs)
     struct = struct_ast(fields)
@@ -171,6 +248,7 @@ defmodule Estructura.Nested do
 
     [
       quote do
+        if Code.ensure_loaded?(Jason), do: @derive(Jason.Encoder)
         defstruct unquote(Macro.escape(struct))
         unquote(defs)
       end
@@ -188,6 +266,7 @@ defmodule Estructura.Nested do
   end
 
   @doc false
+  @spec expand_def(module(), Macro.input()) :: {module(), Macro.output()}
   defp expand_def(module, def) do
     {def, acc} =
       Macro.postwalk(def, [], fn

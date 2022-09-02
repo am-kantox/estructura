@@ -47,7 +47,7 @@ defmodule Estructura.Nested do
     use Estructura.Nested
     shape %{
       name: :string,
-      address: %{city: :string, street: %{name: :string, house: :string}},
+      address: %{city: :string, street: %{name: [:string], house: :string}},
       data: %{age: :float}
     }
   end
@@ -61,7 +61,7 @@ defmodule Estructura.Nested do
   %User{
     address: %User.Address{
       city: nil,
-      street: %User.Address.Street{house: nil, name: nil}
+      street: %User.Address.Street{house: nil, name: []}
     },
     data: %User.Data{age: nil},
     name: nil
@@ -76,29 +76,41 @@ defmodule Estructura.Nested do
     end
   end
 
-  Enum.each(@actions, fn name ->
-    @doc """
-    DSL helper to produce **`#{name}`** callbacks. The syntax is kinda weird,
-      but bear with it, please.
+  Enum.each(@actions -- [:generate], fn name ->
+    doc =
+      """
+      DSL helper to produce **`#{name}`** callbacks. The syntax is kinda weird,
+        but bear with it, please.
 
-    It known to produce warnings in `credo`, I’m working on it.
+      It’s known to produce warnings in `credo`, I’m working on it.
+      """ <>
+        case name do
+          :coerce ->
+            """
+            ```elixir
+            coerce do
+              def data.age(age) when is_float(age), do: {:ok, age}
+              def data.age(age) when is_integer(age), do: {:ok, 1.0 * age}
+              def data.age(age) when is_binary(age), do: {:ok, String.to_float(age)}
+              def data.age(age), do: {:error, "Could not cast \#{inspect(age)} to float"}
+            end
+            ```
+            """
 
-    ```elixir
-    coerce do
-      def data.age(age) when is_float(age), do: {:ok, age}
-      def data.age(age) when is_integer(age), do: {:ok, 1.0 * age}
-      def data.age(age) when is_binary(age), do: {:ok, String.to_float(age)}
-      def data.age(age), do: {:error, "Could not cast \#{inspect(age)} to float"}
-    end
+          :validate ->
+            """
+            ```elixir
+            validate do
+              def address.street.postal_code(<<?0, code::binary-size(4)>>),
+                do: {:ok, code}
+              def address.street.postal_code(code),
+                do: {:error, "Not a postal code (\#{inspect(code)})"}
+            end
+            ```
+            """
+        end
 
-    validate do
-      def address.street.postal_code(<<?0, code::binary-size(4)>>),
-        do: {:ok, code}
-      def address.street.postal_code(code),
-        do: {:error, "Not a postal code (\#{inspect(code)})"}
-    end
-    ```
-    """
+    @doc doc
     defmacro unquote(name)(opts) do
       name = unquote(name)
       opts = Macro.escape(opts)
@@ -137,6 +149,28 @@ defmodule Estructura.Nested do
       end
 
     slice(env.module, nil, shape, impls)
+  end
+
+  @doc false
+  @spec from_term(module(), map() | [map()]) :: term()
+  def from_term(module, list) when is_list(list),
+    do: Enum.map(list, &from_term(module, &1))
+
+  def from_term(module, %{} = map) do
+    {result, []} = do_from_map({struct!(module, []), []}, map)
+    result
+  end
+
+  @spec do_from_map({struct(), [atom()]}, map() | [map()]) :: {:ok, term()}
+  defp do_from_map(acc, map) do
+    Enum.reduce(map, acc, fn
+      {key, %{} = map}, {into, path} ->
+        {into, [_ | path]} = do_from_map({into, [String.to_atom(key) | path]}, map)
+        {into, path}
+
+      {key, value}, {into, path} ->
+        {put_in(into, Enum.reverse([String.to_atom(key) | path]), value), path}
+    end)
   end
 
   @doc false
@@ -192,14 +226,16 @@ defmodule Estructura.Nested do
       fields
       |> Enum.reduce(%{}, fn
         {_, %{}}, acc -> acc
+        {name, [type]}, acc -> Map.put(acc, name, {:list, type})
+        {name, [_ | _] = types}, acc -> Map.put(acc, name, {:mixed, types})
         {name, type}, acc -> Map.put(acc, name, {:simple, type})
       end)
       |> Map.merge(complex)
 
     if is_nil(name) do
-      module_ast(module, all, impl)
+      module_ast(module, false, all, impl)
     else
-      Module.create(module, module_ast(module, all, impl), __ENV__)
+      Module.create(module, module_ast(module, true, all, impl), __ENV__)
       {name, {:estructura, module}}
     end
   end
@@ -215,6 +251,8 @@ defmodule Estructura.Nested do
   @spec struct_ast(shape()) :: [{atom(), nil | struct()}]
   defp struct_ast(fields) do
     Enum.map(fields, fn
+      {name, {:list, _type}} -> {name, []}
+      {name, {:mixed, _types}} -> {name, []}
       {name, {:simple, _type}} -> {name, nil}
       {name, {:estructura, module}} -> {name, struct!(module, [])}
     end)
@@ -223,6 +261,8 @@ defmodule Estructura.Nested do
   @spec generator_ast(shape()) :: [{atom(), mfargs()}]
   defp generator_ast(fields) do
     Enum.map(fields, fn
+      {name, {:list, type}} -> {name, stream_data_type_for([type])}
+      {name, {:mixed, types}} -> {name, stream_data_type_for(types)}
       {name, {:simple, type}} -> {name, stream_data_type_for(type)}
       {name, {:estructura, module}} -> {name, {module, :__generator__, []}}
     end)
@@ -245,15 +285,27 @@ defmodule Estructura.Nested do
   defp stream_data_type_for({_, _, _} = type),
     do: type
 
-  @spec module_ast(module(), shape(), definitions()) :: Macro.output()
-  defp module_ast(module, fields, %{funs: funs, defs: defs}) do
+  @spec module_ast(module(), boolean(), shape(), definitions()) :: Macro.output()
+  defp module_ast(module, nested?, fields, %{funs: funs, defs: defs}) do
     {coercions, validations} = coercions_and_validations(funs)
     struct = struct_ast(fields)
     generator = generator_ast(fields)
 
     [
       quote do
-        if Code.ensure_loaded?(Jason), do: @derive(Jason.Encoder)
+        if unquote(nested?), do: @moduledoc(false)
+
+        if Code.ensure_loaded?(Jason) do
+          @derive Jason.Encoder
+
+          @doc "Safely parses the json, applying all the specified validations and coercions"
+          @spec parse(binary()) :: {:ok, any()} | {:error, any()}
+          def parse(input) do
+            with {:ok, decoded} <- Jason.decode(input),
+                 do: Estructura.Nested.from_term(unquote(module), decoded)
+          end
+        end
+
         defstruct unquote(Macro.escape(struct))
         unquote(defs)
       end

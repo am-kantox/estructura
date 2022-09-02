@@ -98,14 +98,7 @@ defmodule Estructura.User do
   end
 
   validate do
-    def address.street.house(house) do
-      house
-      |> Integer.parse()
-      |> case do
-        {_value, _} -> {:ok, house}
-        _ -> {:error, "Wrong house value: " <> inspect(house)}
-      end
-    end
+    def address.street.house(house), do: {:ok, house}
   end
 end
 

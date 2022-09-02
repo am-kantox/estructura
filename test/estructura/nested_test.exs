@@ -42,4 +42,10 @@ defmodule Estructura.Nested.Test do
       assert is_float(user.data.age)
     end
   end
+
+  property "Jason encode/decode" do
+    check all %User{} = user <- User.__generator__() do
+      assert user == User.parse(Jason.encode!(user))
+    end
+  end
 end

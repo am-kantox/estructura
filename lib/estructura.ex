@@ -192,8 +192,8 @@ defmodule Estructura do
   Calculates the difference between two estructures and returns a tuple with
     the first element containing same values and the second one with diffs.
 
-  This function purposedly rejects to accept maps because maps are not ordered
-    and `Enum.zip/2` of two maps it not pure in general.
+  This function accepts maps but this options should be used as a last resort
+  because structs are 4–6 times faster.
 
   ## Examples
 
@@ -202,9 +202,14 @@ defmodule Estructura do
     use Estructura, enumerable: true
     defstruct a: true, b: false
   end
-  Estructura.diff(struct(M, []), struct(M, b: true))
-
+  Estructura.diff(struct(M, []), struct(M, b: true), :diff)
   #⇒{%{a: true}, %{b: [false, true]}}
+
+  Estructura.diff(%{a: true, b: false}, %{a: true, b: true}, :overlap)
+  #⇒ %{a: true}
+
+  Estructura.diff(%{a: true, b: false}, %{a: true, b: true}, :disjoint)
+  #⇒ %{b: [false, true]}
   ```
   """
   @spec diff(map() | struct(), map() | struct(), :diff) :: {map(), map()}

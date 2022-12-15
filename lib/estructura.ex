@@ -184,4 +184,60 @@ defmodule Estructura do
       end
     end
   end
+
+  @doc """
+  Calculates the difference between two estructures and returns a tuple with
+    the first element containing same values and the second one with diffs.
+
+  This function purposedly rejects to accept maps because maps are not ordered
+    and `Enum.zip/2` of two maps it not pure in general.
+
+  ## Examples
+
+  ```elixir
+  defmodule M do
+    use Estructura, enumerable: true
+    defstruct a: true, b: false
+  end
+  Estructura.diff(struct(M, []), struct(M, b: true))
+
+  #⇒{%{a: true}, %{b: [false, true]}}
+  ```
+  """
+  @spec diff(struct(), struct(), :diff) :: {map(), map()}
+  @spec diff(struct(), struct(), :overlap | :disjoint) :: map()
+  # @spec diff(struct(), struct(), boolean()) :: {map(), map()} | map()
+  def diff(%mod{} = s1, %mod{} = s2, type \\ :disjoint) do
+    result = fn
+      {same, diff}, :overlap -> for {k, %{} = ok} <- diff, into: same, do: {k, ok}
+      {_, result}, :disjoint -> result
+      result, _diff -> result
+    end
+
+    %{
+      nested: {%{nested: nil, same: 42}, %{other: [:qqq, :zzz]}},
+      other: [:foo, :baz]
+    }
+
+    s1
+    |> Enumerable.impl_for()
+    |> is_nil()
+    |> if do
+      [s1, s2]
+    else
+      s1
+      |> Enum.zip(s2)
+      |> Enum.reduce({%{}, %{}}, fn
+        {{key, value}, {key, value}}, {same, diff} ->
+          {Map.put(same, key, value), diff}
+
+        {{key, %mod{} = v1}, {key, %mod{} = v2}}, {same, diff} ->
+          {same, Map.put(diff, key, diff(v1, v2, type))}
+
+        {{key, v1}, {key, v2}}, {same, diff} ->
+          {same, Map.put(diff, key, [v1, v2])}
+      end)
+      |> result.(type)
+    end
+  end
 end

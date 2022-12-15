@@ -11,7 +11,7 @@ defmodule EstructuraTest do
   alias Estructura.Collectable.Map, as: ECM
   alias Estructura.Collectable.MapSet, as: ECMS
 
-  alias Estructura.{Full, LazyInst, Void}
+  alias Estructura.{Diff, Full, LazyInst, Void}
   alias Estructura.{Lazy, LazyMap}
 
   require Integer
@@ -107,6 +107,22 @@ defmodule EstructuraTest do
                    ~r/protocol Enumerable not implemented for %Estructura.Void/,
                    fn -> Enum.map(%Void{}, & &1) end
     end
+
+    {s1, s2} =
+      {%Diff{nested: %Diff{other: :qqq}},
+       %Diff{
+         other: :baz,
+         nested: %Diff{other: :zzz}
+       }}
+
+    assert {%{same: 42},
+            %{nested: {%{nested: nil, same: 42}, %{other: [:qqq, :zzz]}}, other: [:foo, :baz]}} =
+             Estructura.diff(s1, s2, :diff)
+
+    assert %{nested: %{other: [:qqq, :zzz]}, other: [:foo, :baz]} ==
+             Estructura.diff(s1, s2, :disjoint)
+
+    assert %{nested: %{nested: nil, same: 42}, same: 42} = Estructura.diff(s1, s2, :overlap)
   end
 
   property "Generation" do

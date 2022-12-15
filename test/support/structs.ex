@@ -122,3 +122,11 @@ defmodule Estructura.Collectable.Bitstring do
 
   defstruct into: ""
 end
+
+defmodule Estructura.Diff do
+  @moduledoc false
+
+  use Estructura, enumerable: true
+
+  defstruct same: 42, other: :foo, nested: nil
+end

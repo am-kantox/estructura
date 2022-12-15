@@ -185,6 +185,9 @@ defmodule Estructura do
     end
   end
 
+  @typedoc "Diff return type"
+  @type diff_result :: :diff | :overlap | :disjoint
+
   @doc """
   Calculates the difference between two estructures and returns a tuple with
     the first element containing same values and the second one with diffs.
@@ -204,26 +207,17 @@ defmodule Estructura do
   #⇒{%{a: true}, %{b: [false, true]}}
   ```
   """
-  @spec diff(struct(), struct(), :diff) :: {map(), map()}
-  @spec diff(struct(), struct(), :overlap | :disjoint) :: map()
-  # @spec diff(struct(), struct(), boolean()) :: {map(), map()} | map()
-  def diff(%mod{} = s1, %mod{} = s2, type \\ :disjoint) do
-    result = fn
-      {same, diff}, :overlap -> for {k, %{} = ok} <- diff, into: same, do: {k, ok}
-      {_, result}, :disjoint -> result
-      result, _diff -> result
-    end
+  @spec diff(map() | struct(), map() | struct(), :diff) :: {map(), map()}
+  @spec diff(map() | struct(), map() | struct(), :overlap | :disjoint) :: map()
+  def diff(s1, s2, type \\ :disjoint)
 
-    %{
-      nested: {%{nested: nil, same: 42}, %{other: [:qqq, :zzz]}},
-      other: [:foo, :baz]
-    }
-
+  def diff(%mod{} = s1, %mod{} = s2, type) do
     s1
     |> Enumerable.impl_for()
     |> is_nil()
     |> if do
-      [s1, s2]
+      [m1, m2] = Enum.map([s1, s2], &Map.from_struct/1)
+      diff(m1, m2, type)
     else
       s1
       |> Enum.zip(s2)
@@ -237,7 +231,36 @@ defmodule Estructura do
         {{key, v1}, {key, v2}}, {same, diff} ->
           {same, Map.put(diff, key, [v1, v2])}
       end)
-      |> result.(type)
+      |> diff_result(type)
     end
   end
+
+  def diff(%_m1{} = s1, %_m2{} = s2, type),
+    do: diff(Map.from_struct(s1), Map.from_struct(s2), type)
+
+  def diff(%_m1{} = s1, %{} = m2, type), do: diff(Map.from_struct(s1), m2, type)
+  def diff(%{} = m1, %_m2{} = s2, type), do: diff(m1, Map.from_struct(s2), type)
+
+  def diff(%{} = m1, %{} = m2, type) do
+    keys = Enum.uniq(Map.keys(m1) ++ Map.keys(m2))
+
+    keys
+    |> Enum.reduce({%{}, %{}}, fn key, {same, diff} ->
+      {Map.get(m1, key), Map.get(m2, key)}
+      |> case do
+        {v, v} -> {Map.put(same, key, v), diff}
+        {%{} = v1, %{} = v2} -> {same, Map.put(diff, key, diff(v1, v2, type))}
+        {v1, v2} -> {same, Map.put(diff, key, [v1, v2])}
+      end
+    end)
+    |> diff_result(type)
+  end
+
+  @spec diff_result({map(), map()}, :overlap | :disjoint) :: map()
+  defp diff_result({same, diff}, :overlap),
+    do: for({k, %{} = ok} <- diff, into: same, do: {k, ok})
+
+  defp diff_result({_, result}, :disjoint), do: result
+  @spec diff_result({map(), map()}, :diff) :: {map(), map()}
+  defp diff_result(result, _diff), do: result
 end

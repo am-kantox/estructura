@@ -19,6 +19,7 @@ I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since
 
 ## Changelog
 
+* `0.5.3` — `Estructura.diff/3` now understands maps
 * `0.5.2` — `Estructura.diff/3`
 * `0.5.1` — [BUG] Fixed `Collectable` and `Enumerable` imnjected implementations
 * `0.5.0` — `Estructura.Nested` for nested structures with validation, coercion, and generation

@@ -123,6 +123,19 @@ defmodule EstructuraTest do
              Estructura.diff(s1, s2, :disjoint)
 
     assert %{nested: %{nested: nil, same: 42}, same: 42} = Estructura.diff(s1, s2, :overlap)
+
+    {m1, m2} =
+      {%{same: 42, other: :foo, nested: %{same: 42, other: :qqq, nested: nil}},
+       %{same: 42, other: :baz, nested: %{same: 42, other: :zzz, nested: nil}}}
+
+    assert {%{same: 42},
+            %{nested: {%{nested: nil, same: 42}, %{other: [:qqq, :zzz]}}, other: [:foo, :baz]}} =
+             Estructura.diff(m1, m2, :diff)
+
+    assert %{nested: %{other: [:qqq, :zzz]}, other: [:foo, :baz]} ==
+             Estructura.diff(m1, m2, :disjoint)
+
+    assert %{nested: %{nested: nil, same: 42}, same: 42} = Estructura.diff(m1, m2, :overlap)
   end
 
   property "Generation" do

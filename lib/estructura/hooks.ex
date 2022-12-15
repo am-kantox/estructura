@@ -273,7 +273,7 @@ defmodule Estructura.Hooks do
     quote generated: true, location: :keep, bind_quoted: [fields: fields, count: count] do
       module = __MODULE__
 
-      defimpl Enumerable, for: __MODULE__ do
+      defimpl Enumerable do
         def count(_), do: {:ok, unquote(count)}
 
         for key <- fields do
@@ -311,7 +311,7 @@ defmodule Estructura.Hooks do
     quote generated: true, location: :keep, bind_quoted: [field: field] do
       module = __MODULE__
 
-      defimpl Collectable, for: __MODULE__ do
+      defimpl Collectable do
         @dialyzer {:nowarn_function, into: 1}
 
         def into(%unquote(module){unquote(field) => %MapSet{} = old_value} = s) do

@@ -47,7 +47,6 @@ defmodule Estructura.MixProject do
     [
       {:stream_data, "~> 0.5", only: [:ci, :dev, :test], optional: true},
       {:jason, "~> 1.0", only: [:ci, :dev, :test], optional: true},
-      {:boundary, "~> 0.4", runtime: false},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},
       {:dialyxir, "~> 1.0", only: [:dev, :test, :ci], runtime: false},
@@ -115,6 +114,5 @@ defmodule Estructura.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  defp compilers(:prod), do: Mix.compilers()
-  defp compilers(_), do: [:boundary | Mix.compilers()]
+  defp compilers(_), do: Mix.compilers()
 end

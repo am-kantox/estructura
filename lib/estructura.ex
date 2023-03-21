@@ -171,8 +171,6 @@ defmodule Estructura do
   the implementation of lazy map.
   """
 
-  use Boundary
-
   @doc false
   defmacro __using__(opts) do
     quote do

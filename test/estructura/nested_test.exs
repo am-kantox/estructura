@@ -45,7 +45,37 @@ defmodule Estructura.Nested.Test do
 
   property "Jason encode/decode" do
     check all %User{} = user <- User.__generator__() do
-      assert user == User.parse(Jason.encode!(user))
+      assert {:ok, user} == User.parse(Jason.encode!(user))
+    end
+  end
+
+  property "Casting" do
+    check all %User{} = user <- User.__generator__() do
+      raw_user_ok = %{
+        name: user.name,
+        address: %{
+          city: user.address.city,
+          street: %{name: user.address.street.name, house: user.address.street.house}
+        },
+        data: %{age: user.data.age}
+      }
+
+      assert {:ok, user} == User.cast(raw_user_ok)
+
+      raw_user_ko = %{
+        name: user.name,
+        address: %{
+          ciudad: user.address.city,
+          street: %{nombre: user.address.street.name, casa: user.address.street.house}
+        },
+        data: %{age: user.data.age}
+      }
+
+      assert {:error,
+              %KeyError{
+                key: ["address.ciudad", "address.street.casa", "address.street.nombre"],
+                term: Estructura.User
+              }} = User.cast(raw_user_ko)
     end
   end
 end

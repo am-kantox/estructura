@@ -152,24 +152,50 @@ defmodule Estructura.Nested do
   end
 
   @doc false
-  @spec from_term(module(), map() | [map()]) :: term()
+  @spec from_term(module(), map() | [map()]) :: {:ok, struct()} | {:error, Exception.t()}
   def from_term(module, list) when is_list(list),
     do: Enum.map(list, &from_term(module, &1))
 
   def from_term(module, %{} = map) do
-    {result, []} = do_from_map({struct!(module, []), []}, map)
-    result
+    {result, [], errors} = do_from_map({struct!(module, []), [], []}, map)
+
+    case errors do
+      [] -> {:ok, result}
+      errors -> {:error, squeeze(errors, %KeyError{key: [], term: module})}
+    end
   end
 
-  @spec do_from_map({struct(), [atom()]}, map() | [map()]) :: {:ok, term()}
+  defp atomize(key) when is_atom(key), do: key
+  defp atomize(key) when is_binary(key), do: String.to_atom(key)
+
+  defp squeeze([], acc), do: acc
+
+  defp squeeze([%KeyError{key: key, term: term} | rest], %KeyError{key: keys, term: parent} = acc) do
+    path = [term, parent] |> Enum.map(&Module.split/1) |> trim_left()
+    key = path |> Kernel.++([key]) |> Enum.join(".") |> String.downcase()
+    squeeze(rest, %KeyError{acc | key: [key | keys]})
+  end
+
+  defp trim_left([list, []]), do: list
+  defp trim_left([[h | list], [h | lead]]), do: trim_left([list, lead])
+
+  @spec do_from_map({struct(), [atom()], [Exception.t()]}, map()) ::
+          {struct(), [atom()], [Exception.t()]}
   defp do_from_map(acc, map) do
     Enum.reduce(map, acc, fn
-      {key, %{} = map}, {into, path} ->
-        {into, [_ | path]} = do_from_map({into, [String.to_atom(key) | path]}, map)
-        {into, path}
+      {key, %{} = map}, {into, path, errors} ->
+        {into, [_ | path], errors} = do_from_map({into, [atomize(key) | path], errors}, map)
+        {into, path, errors}
 
-      {key, value}, {into, path} ->
-        {put_in(into, Enum.reverse([String.to_atom(key) | path]), value), path}
+      {key, value}, {into, path, errors} ->
+        key_path = Enum.reverse([atomize(key) | path])
+
+        try do
+          {put_in(into, key_path, value), path, errors}
+        rescue
+          e in [KeyError] ->
+            {into, path, [e | errors]}
+        end
     end)
   end
 
@@ -299,14 +325,36 @@ defmodule Estructura.Nested do
           @derive Jason.Encoder
 
           @doc "Safely parses the json, applying all the specified validations and coercions"
-          @spec parse(binary()) :: {:ok, any()} | {:error, any()}
+          @spec parse(binary()) :: {:ok, struct()} | {:error, Exception.t()}
           def parse(input) do
             with {:ok, decoded} <- Jason.decode(input),
-                 do: Estructura.Nested.from_term(unquote(module), decoded)
+                 do: unquote(module).cast(decoded)
           end
+
+          @doc "Same as `parse/1` but either returns the result of successful parsing or raises"
+          @spec parse!(binary()) :: struct() | no_return()
+          def parse!(input),
+            do: input |> Jason.decode!() |> unquote(module).cast!()
         end
 
         defstruct unquote(Macro.escape(struct))
+
+        @doc """
+        Casts the map representation as given to `Estructura.Nested.shape/1` to
+          the nested `Estructura` instance.
+        """
+        def cast(%{} = content),
+          do: Estructura.Nested.from_term(unquote(module), content)
+
+        def cast!(%{} = content) do
+          content
+          |> cast()
+          |> case do
+            {:ok, cast} -> cast
+            {:error, error} -> raise error
+          end
+        end
+
         unquote(defs)
       end
       | Estructura.Hooks.estructura_ast(

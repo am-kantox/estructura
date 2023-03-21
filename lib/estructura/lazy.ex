@@ -3,8 +3,6 @@ defmodule Estructura.Lazy do
   The field stub allowing lazy instantiation of `Estructura` fields.
   """
 
-  use Boundary
-
   alias Estructura.Lazy
 
   @type key :: Map.key()

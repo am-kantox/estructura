@@ -19,9 +19,10 @@ I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since
 
 ## Changelog
 
+* `0.5.4` — `Estructura.Nested.cast/1` to cast nested structs from maps
 * `0.5.3` — `Estructura.diff/3` now understands maps
 * `0.5.2` — `Estructura.diff/3`
-* `0.5.1` — [BUG] Fixed `Collectable` and `Enumerable` imnjected implementations
+* `0.5.1` — [BUG] Fixed `Collectable` and `Enumerable` injected implementations
 * `0.5.0` — `Estructura.Nested` for nested structures with validation, coercion, and generation
 * `0.4.2` — [BUG] Fixed wrong spec for `put!/3`
 * `0.4.1` — `Estructura.LazyMap.keys/1`, `Estructura.LazyMap.fetch_all/1`

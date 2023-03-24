@@ -9,7 +9,7 @@ defmodule Estructura.LazyInst do
   @moduledoc false
   use Estructura, access: :lazy
 
-  def parse_int(bin), do: with {int, _} <- Integer.parse(bin), do: {:ok, int}
+  def parse_int(bin), do: with({int, _} <- Integer.parse(bin), do: {:ok, int})
   def current_time("42"), do: {:ok, DateTime.utc_now()}
 
   defstruct __lazy_data__: "42",
@@ -73,7 +73,53 @@ defmodule Estructura.Collectable.List do
 end
 
 defmodule Estructura.User do
-  @moduledoc false
+  @moduledoc """
+  Nested example. The source code of the file follows.
+
+  ```elixir
+  use Estructura.Nested
+
+  shape %{
+    name: :string,
+    address: %{city: :string, street: %{name: [:string], house: :string}},
+    data: %{age: :float}
+  }
+
+  coerce do
+    def data.age(age) when is_float(age), do: {:ok, age}
+    def data.age(age) when is_integer(age), do: {:ok, 1.0 * age}
+    def data.age(age) when is_binary(age) do
+      age
+      |> Float.parse()
+      |> case do
+        {age, ""} -> {:ok, age}
+        {age, _rest} -> {:ok, age}
+        :error -> {:ok, 0.0}
+      end
+    end
+  end
+
+  validate do
+    def address.street.house(house), do: {:ok, house}
+  end
+  ```
+
+  Now one can cast it from map as below
+
+  ```elixir
+  User.cast %{address: %{city: "London", street: %{name: "Baker", house: "221 Bis"}}, data: %{age: 32}, name: "Watson"}
+
+  {:ok,
+     %Estructura.User{
+       address: %Estructura.User.Address{
+         city: "London",
+         street: %Estructura.User.Address.Street{house: "221 Bis", name: "Baker"}
+       },
+       data: %Estructura.User.Data{age: 32.0},
+       name: "Watson"}}
+  ```
+
+  """
 
   use Estructura.Nested
 

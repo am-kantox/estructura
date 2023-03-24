@@ -103,7 +103,8 @@ defmodule Estructura.MixProject do
           Estructura.Config
         ],
         Examples: [
-          Estructura.Full
+          Estructura.Full,
+          Estructura.User
         ]
       ]
     ]

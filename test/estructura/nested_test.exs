@@ -60,7 +60,7 @@ defmodule Estructura.Nested.Test do
         data: %{age: user.data.age}
       }
 
-      assert {:ok, user} == User.cast(raw_user_ok)
+      assert {:ok, ^user} = User.cast(raw_user_ok)
 
       raw_user_ko = %{
         name: user.name,
@@ -73,9 +73,11 @@ defmodule Estructura.Nested.Test do
 
       assert {:error,
               %KeyError{
-                key: ["address.ciudad", "address.street.casa", "address.street.nombre"],
+                key: key,
                 term: Estructura.User
               }} = User.cast(raw_user_ko)
+
+      assert Enum.sort(key) == ["address.ciudad", "address.street.casa", "address.street.nombre"]
     end
   end
 end

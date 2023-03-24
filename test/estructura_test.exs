@@ -196,7 +196,7 @@ defmodule EstructuraTest do
   end
 
   test "LazyMap.keys/1" do
-    assert [:bar, :foo] = LazyMap.keys(@lazy_map)
+    assert [:bar, :foo] = @lazy_map |> LazyMap.keys() |> Enum.sort()
   end
 
   test "LazyMap.fetch_all/1" do

@@ -501,7 +501,9 @@ defmodule Estructura.Hooks do
           end
 
         declarations =
-          Enum.map_join(declarations, "\n", fn {key, declaration} ->
+          declarations
+          |> Enum.reject(&match?({_, ""}, &1))
+          |> Enum.map_join("\n", fn {key, declaration} ->
             "\n## #{key}\n```elixir\n#{declaration}\n```\n"
           end)
 

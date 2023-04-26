@@ -295,6 +295,9 @@ defmodule Estructura.Nested do
   end
 
   @spec stream_data_type_for(simple_type_variants() | [simple_type_variants()]) :: mfargs()
+  defp stream_data_type_for({:constant, const}),
+    do: {StreamData, :constant, [const]}
+
   defp stream_data_type_for({:string, kind}),
     do: {StreamData, :string, [kind]}
 
@@ -310,6 +313,9 @@ defmodule Estructura.Nested do
 
   defp stream_data_type_for({_, _, _} = type),
     do: type
+
+  defp stream_data_type_for(const),
+    do: {StreamData, :constant, [const]}
 
   @spec module_ast(module(), boolean(), shape(), definitions()) :: Macro.output()
   defp module_ast(module, nested?, fields, %{funs: funs, defs: defs}) do

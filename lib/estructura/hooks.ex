@@ -477,20 +477,18 @@ defmodule Estructura.Hooks do
               result =
                 [:coerce, :validate]
                 |> Enum.map(fn what ->
-                  result =
-                    estructura
-                    |> Map.get(what, [])
-                    |> Enum.flat_map(fn {_who, ast} ->
-                      code = Macro.to_string(ast)
-
-                      case Regex.scan(matcher, code, capture: :all_but_first) do
-                        [list] when is_list(list) -> list
-                        _ -> []
-                      end
-                    end)
-                    |> Enum.join("\n")
-
-                  {what, result}
+                  {what,
+                   estructura
+                   |> Map.get(what, [])
+                   |> Enum.flat_map(fn {_who, ast} ->
+                     matcher
+                     |> Regex.scan(Macro.to_string(ast), capture: :all_but_first)
+                     |> case do
+                       [list] when is_list(list) -> list
+                       _ -> []
+                     end
+                   end)
+                   |> Enum.join("\n")}
                 end)
                 |> Keyword.put(:shape, inspect(estructura.shape, pretty: true, width: 80))
 

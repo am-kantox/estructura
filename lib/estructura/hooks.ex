@@ -458,13 +458,58 @@ defmodule Estructura.Hooks do
         @spec __generator__() :: StreamData.t(%__MODULE__{})
         def __generator__, do: __generator__(%__MODULE__{})
 
-        @doc """
-        Returns the generator to be used in `StreamData`-powered property testing, based
-          on the specification given to `use #{inspect(__MODULE__)}`, which was
+        {usage, declarations} =
+          cond do
+            Module.has_attribute?(__MODULE__, :__estructura__) ->
+              {"`use Estructura`",
+               [
+                 shape:
+                   inspect(Module.get_attribute(__MODULE__, :__estructura__),
+                     pretty: true,
+                     width: 80
+                   )
+               ]}
 
-        ```elixir
-        #{inspect(Module.get_attribute(__MODULE__, :__estructura__), pretty: true, width: 80)}
-        ```
+            Module.has_attribute?(__MODULE__, :__estructura_nested__) ->
+              estructura = Module.get_attribute(__MODULE__, :__estructura_nested__)
+              matcher = ~r/\n([[:space:]]*def.*end)\n]/usm
+
+              result =
+                [:coerce, :validate]
+                |> Enum.map(fn what ->
+                  result =
+                    estructura
+                    |> Map.get(what, [])
+                    |> Enum.flat_map(fn {_who, ast} ->
+                      code = Macro.to_string(ast)
+
+                      case Regex.scan(matcher, code, capture: :all_but_first) do
+                        [list] when is_list(list) -> list
+                        _ -> []
+                      end
+                    end)
+                    |> Enum.join("\n")
+
+                  {what, result}
+                end)
+                |> Keyword.put(:shape, inspect(estructura.shape, pretty: true, width: 80))
+
+              {"`use Estructura.Nested`", result}
+
+            true ->
+              {"N/A", []}
+          end
+
+        declarations =
+          Enum.map_join(declarations, "\n", fn {key, declaration} ->
+            "\n## #{key}\n```elixir\n#{declaration}\n```\n"
+          end)
+
+        @doc ~s"""
+        Returns the generator to be used in `StreamData`-powered property testing, based
+          on the specification given to #{usage}, which contained
+
+        #{declarations}
 
         The argument given would be used as a template to generate new values.
         """

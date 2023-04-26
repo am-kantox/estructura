@@ -174,9 +174,17 @@ defmodule Estructura do
   @doc false
   defmacro __using__(opts) do
     quote do
-      @__estructura__ struct!(Estructura.Config, unquote(opts))
+      estructura = struct!(Estructura.Config, unquote(opts))
+
+      Module.register_attribute(__MODULE__, :__estructura__,
+        accumulate: false,
+        persist: true
+      )
+
+      Module.put_attribute(__MODULE__, :__estructura__, estructura)
+
       @before_compile {Estructura.Hooks, :inject_estructura}
-      if @__estructura__.access == :lazy and
+      if estructura.access == :lazy and
            is_nil(Enum.find(Module.get_attribute(__MODULE__, :derive), &match?({Inspect, _}, &1))) do
         @derive {Inspect, except: [:__lazy_data__]}
       end

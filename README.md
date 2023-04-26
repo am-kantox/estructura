@@ -18,7 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
-
+* `0.5.5` — export declarations of both `Estructura` and `Estructura.Nested` to docs
 * `0.5.4` — `Estructura.Nested` allows `cast/1` to cast nested structs from maps
 * `0.5.3` — `Estructura.diff/3` now understands maps
 * `0.5.2` — `Estructura.diff/3`

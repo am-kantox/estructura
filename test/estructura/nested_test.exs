@@ -3,6 +3,7 @@ defmodule Estructura.Nested.Test do
   use ExUnitProperties
 
   doctest Estructura.Nested
+  doctest Estructura.Transformer
 
   alias Estructura.User
   alias Estructura.User.Data
@@ -46,6 +47,39 @@ defmodule Estructura.Nested.Test do
   property "Jason encode/decode" do
     check all %User{} = user <- User.__generator__() do
       assert {:ok, user} == User.parse(Jason.encode!(user))
+    end
+  end
+
+  property "Transformer" do
+    check all %User{} = user <- User.__generator__() do
+      assert [
+               *: Estructura.User,
+               address: [
+                 *: Estructura.User.Address,
+                 city: _,
+                 street: [*: Estructura.User.Address.Street, house: _, name: _]
+               ],
+               data: [*: Estructura.User.Data, age: _],
+               name: _
+             ] = Estructura.Transformer.transform(user)
+    end
+
+    check all %User{} = user <- User.__generator__() do
+      assert [
+               address: [
+                 street: [house: _, name: _]
+               ],
+               data: [age: _],
+               name: _
+             ] = Estructura.Transformer.transform(user, except: [:city], type: false)
+    end
+
+    check all %User{} = user <- User.__generator__() do
+      assert [address: [street: [name: _]], data: [age: _], name: _] =
+               Estructura.Transformer.transform(user,
+                 only: [:name | ~w|address.street data.age|],
+                 type: false
+               )
     end
   end
 

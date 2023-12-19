@@ -343,6 +343,8 @@ defmodule Estructura.Nested do
             do: input |> Jason.decode!() |> unquote(module).cast!()
         end
 
+        @derive Estructura.Transformer
+
         defstruct unquote(Macro.escape(struct))
 
         @doc """

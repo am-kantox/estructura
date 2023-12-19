@@ -188,6 +188,8 @@ defmodule Estructura do
            is_nil(Enum.find(Module.get_attribute(__MODULE__, :derive), &match?({Inspect, _}, &1))) do
         @derive {Inspect, except: [:__lazy_data__]}
       end
+
+      @derive {Estructura.Transformer, except: [:__lazy_data__]}
     end
   end
 

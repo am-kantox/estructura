@@ -7,7 +7,7 @@ defprotocol Estructura.Transformer do
 end
 
 defimpl Estructura.Transformer, for: Any do
-  defmacro __deriving__(module, struct, options) do
+  defmacro __deriving__(module, _struct, options) do
     quote do
       defimpl Estructura.Transformer, for: unquote(module) do
         def transform(input, options) do
@@ -21,7 +21,7 @@ defimpl Estructura.Transformer, for: Any do
             options |> Keyword.get(:except, []) |> split_nesteds()
 
           data =
-            unquote(Macro.escape(struct))
+            input
             |> then(fn struct ->
               case onlies ++ Map.keys(grouped_nested_onlies) do
                 [] -> Map.from_struct(struct)

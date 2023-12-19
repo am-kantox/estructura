@@ -1,7 +1,40 @@
 defprotocol Estructura.Transformer do
   @doc """
   The function returning the transformed input to be used with `Inspect` protocol.
+
+  This protocol is explicitly handful when deeply nested structs are to be logged/inspected.
+
+  ```elixir
+  iex|%_{}|1 ▶ %Estructura.User{}
+  %Estructura.User{
+    address: %Estructura.User.Address{
+      city: nil,
+      street: %Estructura.User.Address.Street{house: nil, name: []}
+    },
+    data: %Estructura.User.Data{age: nil},
+    name: nil
+  }
+
+
+  iex|%_{}|2 ▶ Estructura.Transformer.transform %Estructura.User{}, type: false, except: ~w|address.street data.age|
+  [address: [city: nil], data: [], name: nil]
+  iex|%_{}|3 ▶ Estructura.Transformer.transform %Estructura.User{}, type: false, only: ~w|address.street data.age|
+  [address: [street: [house: nil, name: []]], data: [age: nil]]
+  iex|%_{}|4 ▶ Estructura.Transformer.transform %Estructura.User{}, only: ~w|address|
+  [
+    *: Estructura.User,
+    address: [
+      *: Estructura.User.Address,
+      city: nil,
+      street: [*: Estructura.User.Address.Street, house: nil, name: []]
+    ]
+  ]
+  ```
+
+  To enable it for your struct, use `@derive Estructura.Transformer` or
+    `@derive {Estructura.Transformer, options}`. `Estructura` implementations derive it be default.
   """
+
   @spec transform(t(), keyword()) :: term()
   def transform(input, options \\ [])
 end

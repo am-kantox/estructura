@@ -11,7 +11,7 @@ defimpl Estructura.Transformer, for: Any do
     quote do
       defimpl Estructura.Transformer, for: unquote(module) do
         def transform(input, options) do
-          options = Keyword.merge(options, unquote(options))
+          options = Keyword.merge(unquote(options), options)
           type = Keyword.get(options, :type, true)
 
           {onlies, nested_onlies, grouped_nested_onlies} =

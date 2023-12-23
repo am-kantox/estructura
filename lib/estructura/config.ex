@@ -7,7 +7,7 @@ defmodule Estructura.Config do
   """
 
   @typedoc "The generator to be passed to `use Estructura` should be given in one of these forms"
-  @type generator :: {module(), atom()} | {module(), atom(), [any()]} | (() -> any())
+  @type generator :: {module(), atom()} | {module(), atom(), [any()]} | (-> any())
 
   @typedoc "The structure key"
   @type key :: atom()

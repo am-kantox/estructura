@@ -62,6 +62,8 @@ defimpl Estructura.Transformer, for: Any do
               end
             end)
             |> Map.drop(excepts)
+            |> Enum.to_list()
+            |> Enum.sort()
             |> Enum.map(fn {k, v} ->
               options =
                 options

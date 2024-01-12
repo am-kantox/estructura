@@ -18,6 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.0.0` — Elixir v1.16 and deps
 * `0.6.0` — `Estructura.Transform` to produce squeezed representations of nested structs
 * `0.5.5` — export declarations of both `Estructura` and `Estructura.Nested` to docs
 * `0.5.4` — `Estructura.Nested` allows `cast/1` to cast nested structs from maps

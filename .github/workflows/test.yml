@@ -14,10 +14,10 @@ jobs:
         include:
           - pair:
               otp: 24.2
-              elixir: 1.13.2
+              elixir: 1.13
           - pair:
               otp: 26.2
-              elixir: 1.16.0
+              elixir: 1.16
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-elixir@v1

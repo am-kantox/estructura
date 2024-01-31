@@ -342,7 +342,7 @@ defmodule Estructura.Nested do
       quote do
         if unquote(nested?), do: @moduledoc(false)
 
-        if Code.ensure_loaded?(Jason) do
+        if {:module, Jason} == Code.ensure_compiled(Jason) do
           @derive Jason.Encoder
 
           @doc "Safely parses the json, applying all the specified validations and coercions"

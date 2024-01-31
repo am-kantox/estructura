@@ -13,8 +13,8 @@ defmodule Estructura.Tree.Test do
                   name: "Baz.Baz2",
                   attributes: %{},
                   content: [
-                    %Tree{name: "Deep2", attributes: %{}, content: []},
-                    %Tree{name: "Deep1", attributes: %{}, content: []}
+                    %Tree{name: "Deep1", attributes: %{}, content: []},
+                    %Tree{name: "Deep2", attributes: %{}, content: []}
                   ]
                 }
               ]
@@ -42,5 +42,17 @@ defmodule Estructura.Tree.Test do
                attributes: {:foo, :bar},
                content: %{name: ["Baz", "Baz2"], content: [%{nameA: "Deep1"}, %{nameB: "Deep2"}]}
              })
+  end
+
+  test "generates XmlBuilder AST" do
+    assert {:ok, tree} =
+             Tree.coerce(%{
+               name: "Bar",
+               attributes: {:foo, :bar},
+               content: %{name: ["Baz", "Baz2"], content: [%{name: "Deep1"}, %{name: "Deep2"}]}
+             })
+
+    assert {"Bar", %{foo: :bar}, [{"Baz.Baz2", %{}, [{"Deep1", %{}, []}, {"Deep2", %{}, []}]}]} =
+             Tree.to_ast(tree)
   end
 end

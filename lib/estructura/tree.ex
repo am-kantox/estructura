@@ -15,7 +15,18 @@ defmodule Estructura.Tree do
       content: {StreamData, :list_of, [{Estructura.Tree, :__generator__}]}
     ]
 
+  if {:module, Jason} == Code.ensure_compiled(Jason) do
+    @derive {Jason.Encoder, only: [:name, :attributes, :content]}
+  end
+
   defstruct name: nil, attributes: %{}, content: []
+
+  @type t :: %{
+          __struct__: Estructura.Tree,
+          name: atom() | binary(),
+          attributes: map(),
+          content: nil | binary() | [binary() | Estructura.Tree.t()]
+        }
 
   @impl Estructura.Tree.Coercible
   def coerce_name(value) when is_binary(value), do: {:ok, value}
@@ -44,15 +55,17 @@ defmodule Estructura.Tree do
     do: {:error, "Cannot coerce value given for `attributes` field (#{inspect(value)})"}
 
   @impl Estructura.Tree.Coercible
+  def coerce_content(nil), do: {:ok, nil}
+  def coerce_content(text) when is_binary(text), do: {:ok, text}
   def coerce_content(value), do: value |> List.wrap() |> do_coerce_content({[], []})
 
-  defp do_coerce_content([], {good, []}), do: {:ok, good}
+  defp do_coerce_content([], {good, []}), do: {:ok, Enum.reverse(good)}
 
   defp do_coerce_content([], {_, bad}),
     do: {:error, "The following elements could not be coerced: #{inspect(bad)}"}
 
-  # defp do_coerce_content(%Estructura.Tree{} = only, {good, bad}),
-  #   do: do_coerce_content([], {[only | good], bad})
+  defp do_coerce_content([head | rest], {good, bad}) when is_binary(head),
+    do: do_coerce_content(rest, {[head | good], bad})
 
   defp do_coerce_content([%Estructura.Tree{} = head | rest], {good, bad}),
     do: do_coerce_content(rest, {[head | good], bad})
@@ -78,8 +91,12 @@ defmodule Estructura.Tree do
     do: {:error, ":attributes must be a map, ‹#{inspect(value)}› given"}
 
   @impl Estructura.Tree.Validatable
+  def validate_content(nil), do: {:ok, nil}
+  def validate_content(text) when is_binary(text), do: {:ok, text}
   def validate_content(value) when is_list(value), do: {:ok, value}
-  def validate_content(value), do: {:error, ":content must be a list, ‹#{inspect(value)}› given"}
+
+  def validate_content(value),
+    do: {:error, ":content must be a nil, a binary, or a list, ‹#{inspect(value)}› given"}
 
   @doc """
   Coerces the deeply nested map to an instance of nested `Estructura.Tree`
@@ -90,6 +107,12 @@ defmodule Estructura.Tree do
 
   def coerce(%Estructura.Tree{} = tree, key_prefix),
     do: tree |> Map.from_struct() |> coerce(key_prefix)
+
+  def coerce(nil, _key_prefix),
+    do: {:ok, nil}
+
+  def coerce(text_node, _key_prefix) when is_binary(text_node),
+    do: {:ok, text_node}
 
   def coerce(list, key_prefix) when is_list(list) do
     result = Enum.map(list, &coerce(&1, key_prefix))
@@ -131,4 +154,18 @@ defmodule Estructura.Tree do
 
   def coerce(term, key_prefix),
     do: {:error, "Unknown term at #{inspect(key_prefix)}: ‹#{inspect(term)}›"}
+
+  @doc """
+  Converts `Estructura.Tree` to the XML AST understandable by `XmlBuilder`
+  """
+  @spec to_ast(t()) :: {element, map(), content}
+        when element: atom() | binary(), content: nil | binary() | list()
+  def to_ast(%Estructura.Tree{} = tree), do: ast_content(tree)
+
+  defp ast_content(%Estructura.Tree{name: name, attributes: attributes, content: content}),
+    do: {name, attributes, ast_content(content)}
+
+  defp ast_content(nil), do: nil
+  defp ast_content(text_node) when is_binary(text_node), do: text_node
+  defp ast_content(list) when is_list(list), do: Enum.map(list, &ast_content/1)
 end

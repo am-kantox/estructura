@@ -39,8 +39,8 @@ defmodule Estructura.Hooks do
       for key <- fields do
         quote generated: true, location: :keep do
           def put(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
-            with {:ok, value} <- coerce(unquote(key), value),
-                 {:ok, value} <- validate(unquote(key), value),
+            with {:ok, value} <- coerce_value(unquote(key), value),
+                 {:ok, value} <- validate_value(unquote(key), value),
                  do: {:ok, %__MODULE__{data | unquote(key) => value}}
           end
 
@@ -164,8 +164,8 @@ defmodule Estructura.Hooks do
   defp coercion_ast(false, _, all_fields),
     do: [
       quote do
-        @compile {:inline, coerce: 2}
-        defp coerce(key, value) when key in unquote(all_fields), do: {:ok, value}
+        @compile {:inline, coerce_value: 2}
+        defp coerce_value(key, value) when key in unquote(all_fields), do: {:ok, value}
       end
     ]
 
@@ -204,7 +204,7 @@ defmodule Estructura.Hooks do
     coerce_clauses =
       for key <- fields do
         quote generated: true, location: :keep do
-          defp coerce(unquote(key), value),
+          defp coerce_value(unquote(key), value),
             do: apply(__MODULE__, unquote(:"coerce_#{key}"), [value])
         end
       end
@@ -216,7 +216,7 @@ defmodule Estructura.Hooks do
   defp validation_ast(false, _, all_fields),
     do: [
       quote do
-        defp validate(key, value) when key in unquote(all_fields), do: {:ok, value}
+        defp validate_value(key, value) when key in unquote(all_fields), do: {:ok, value}
       end
     ]
 
@@ -256,7 +256,7 @@ defmodule Estructura.Hooks do
     validate_clauses =
       for key <- fields do
         quote generated: true, location: :keep do
-          defp validate(unquote(key), value),
+          defp validate_value(unquote(key), value),
             do: apply(__MODULE__, unquote(:"validate_#{key}"), [value])
         end
       end

@@ -269,6 +269,12 @@ defmodule Estructura do
     |> diff_result(type)
   end
 
+  @doc """
+  Instantiates the struct by using `Access` from a map, passing all coercions and validations.
+  """
+  @spec coerce(module(), map()) :: {:ok, struct()} | {:error, Exception.t()}
+  def coerce(module, %{} = map) when is_atom(module), do: Estructura.Nested.from_term(module, map)
+
   @spec diff_result({map(), map()}, :overlap | :disjoint) :: map()
   defp diff_result({same, diff}, :overlap),
     do: for({k, %{} = ok} <- diff, into: same, do: {k, ok})

@@ -6,7 +6,6 @@ IEx.configure(
     eval_info: [:yellow, :bright ],
   ],
   default_prompt: [
-    "\e[G", # cursor ⇒ column 1
      :green, "%prefix", :white, "|%_{}|", :green, "%counter", " ", :blue, "▶", :reset
   ] |> IO.ANSI.format |> IO.chardata_to_string,
   inspect: [

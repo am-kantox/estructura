@@ -170,10 +170,18 @@ defmodule Estructura.Nested do
 
   defp squeeze([], acc), do: acc
 
-  defp squeeze([%KeyError{key: key, term: term} | rest], %KeyError{key: keys, term: parent} = acc) do
+  defp squeeze(
+         [%KeyError{key: key, term: term, message: msg} | rest],
+         %KeyError{key: keys, term: parent, message: message} = acc
+       ) do
     path = [term, parent] |> Enum.map(&Module.split/1) |> trim_left()
     key = path |> Kernel.++([key]) |> Enum.join(".") |> String.downcase()
-    squeeze(rest, %KeyError{acc | key: [key | keys]})
+
+    squeeze(rest, %KeyError{
+      acc
+      | key: [key | keys],
+        message: [msg, message] |> Enum.filter(&is_binary/1) |> Enum.join("\n")
+    })
   end
 
   defp trim_left([list, []]), do: list
@@ -193,6 +201,13 @@ defmodule Estructura.Nested do
         try do
           {put_in(into, key_path, value), path, errors}
         rescue
+          e in [ArgumentError] ->
+            {into, path,
+             [
+               %KeyError{message: e.message, key: Enum.join(key_path, "."), term: into.__struct__}
+               | errors
+             ]}
+
           e in [KeyError] ->
             {into, path, [e | errors]}
         end

@@ -18,6 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.2.2` — `Estructura.Flattenable`
 * `1.2.1` — Generators for `:datetime` and `:date`
 * `1.2.0` — `Estructura.Nested` would attempt to split keys by a delimiter if instructed
 * `1.1.0` — `Estructura.Tree` to hold an AST structure, like XML

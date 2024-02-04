@@ -195,7 +195,7 @@ defmodule Estructura.Nested do
           {struct(), [atom()], [Exception.t()]}
   defp do_from_map(acc, map, options) do
     Enum.reduce(map, acc, fn
-      {key, %{} = map}, {into, path, errors} ->
+      {key, %{} = map}, {into, path, errors} when not is_struct(map) ->
         {into, [_ | path], errors} =
           do_from_map({into, [atomize(key) | path], errors}, map, options)
 
@@ -257,18 +257,8 @@ defmodule Estructura.Nested do
   def reshape(defs, action, module) when is_list(defs),
     do: Enum.map(defs, &reshape(&1, action, module))
 
-  def reshape({:def, meta, [{{:., _, _} = def, submeta, args} | rest]}, action, module) do
-    {acc, def} = expand_def(module, def)
-
-    {{acc, {action, def}},
-     [
-       {:@, meta, [{:impl, [], [true]}]},
-       {:def, meta, [{:"#{action}_#{def}", submeta, args} | rest]}
-     ]}
-  end
-
   def reshape(
-        {:def, meta, [{:when, when_meta, [{{:., _, _} = def, submeta, args}, guard]} | rest]},
+        {:def, meta, [{:when, when_meta, [{def, submeta, args}, guard]} | rest]},
         action,
         module
       ) do
@@ -278,6 +268,16 @@ defmodule Estructura.Nested do
      [
        {:@, meta, [{:impl, [], [true]}]},
        {:def, meta, [{:when, when_meta, [{:"#{action}_#{def}", submeta, args}, guard]} | rest]}
+     ]}
+  end
+
+  def reshape({:def, meta, [{def, submeta, args} | rest]}, action, module) do
+    {acc, def} = expand_def(module, def)
+
+    {{acc, {action, def}},
+     [
+       {:@, meta, [{:impl, [], [true]}]},
+       {:def, meta, [{:"#{action}_#{def}", submeta, args} | rest]}
      ]}
   end
 
@@ -340,6 +340,18 @@ defmodule Estructura.Nested do
   end
 
   @spec stream_data_type_for(simple_type_variants() | [simple_type_variants()]) :: mfargs()
+  defp stream_data_type_for({:datetime, opts}),
+    do: {Estructura.StreamData, :datetime, [opts]}
+
+  defp stream_data_type_for(:datetime),
+    do: stream_data_type_for({:datetime, []})
+
+  defp stream_data_type_for({:date, opts}),
+    do: {Estructura.StreamData, :date, [opts]}
+
+  defp stream_data_type_for(:date),
+    do: stream_data_type_for({:date, []})
+
   defp stream_data_type_for({:constant, const}),
     do: {StreamData, :constant, [const]}
 

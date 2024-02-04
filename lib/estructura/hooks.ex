@@ -407,122 +407,120 @@ defmodule Estructura.Hooks do
   @spec generator_ast(false | keyword()) :: Macro.t()
   defp generator_ast(false), do: []
 
-  if match?({:module, StreamData}, Code.ensure_compiled(StreamData)) do
-    defp generator_ast([{_, _} | _] = types) do
-      fields = Keyword.keys(types)
+  defp generator_ast([{_, _} | _] = types) do
+    fields = Keyword.keys(types)
 
-      quote generated: true, location: :keep do
-        module = __MODULE__
+    quote generated: true, location: :keep do
+      module = __MODULE__
 
-        defp fix_gen(many) when is_list(many), do: Enum.map(many, &fix_gen/1)
+      defp fix_gen(many) when is_list(many), do: Enum.map(many, &fix_gen/1)
 
-        defp fix_gen(capture) when is_function(capture, 0),
-          do: with(info <- Function.info(capture), do: fix_gen({info[:module], info[:name]}))
+      defp fix_gen(capture) when is_function(capture, 0),
+        do: with(info <- Function.info(capture), do: fix_gen({info[:module], info[:name]}))
 
-        defp fix_gen({key, {mod, fun, args} = value})
-             when is_atom(mod) and is_atom(fun) and is_list(args),
-             do: {key, fix_gen(value)}
+      defp fix_gen({key, {mod, fun, args} = value})
+           when is_atom(mod) and is_atom(fun) and is_list(args),
+           do: {key, fix_gen(value)}
 
-        defp fix_gen({key, {mod, fun}}) when is_atom(mod) and is_atom(fun),
-          do: fix_gen({key, {mod, fun, []}})
+      defp fix_gen({key, {mod, fun}}) when is_atom(mod) and is_atom(fun),
+        do: fix_gen({key, {mod, fun, []}})
 
-        defp fix_gen({mod, fun, args}) when is_atom(mod) and is_atom(fun) and is_list(args) do
-          {{:., [], [mod, fun]}, [], fix_gen(args)}
-        end
+      defp fix_gen({mod, fun, args}) when is_atom(mod) and is_atom(fun) and is_list(args) do
+        {{:., [], [mod, fun]}, [], fix_gen(args)}
+      end
 
-        defp fix_gen({mod, fun}) when is_atom(mod) and is_atom(fun), do: fix_gen({mod, fun, []})
-        defp fix_gen(value), do: Macro.escape(value)
+      defp fix_gen({mod, fun}) when is_atom(mod) and is_atom(fun), do: fix_gen({mod, fun, []})
+      defp fix_gen(value), do: Macro.escape(value)
 
-        # @dialyzer {:nowarn_function, generation_leaf: 1}
-        defp generation_leaf(args),
-          do: {{:., [], [StreamData, :constant]}, [], [{:{}, [], args}]}
+      # @dialyzer {:nowarn_function, generation_leaf: 1}
+      defp generation_leaf(args),
+        do: {{:., [], [StreamData, :constant]}, [], [{:{}, [], args}]}
 
-        defp generation_clause({arg, gen}, acc) do
-          {{:., [], [StreamData, :bind]}, [], [gen, {:fn, [], [{:->, [], [[arg], acc]}]}]}
-        end
+      defp generation_clause({arg, gen}, acc) do
+        {{:., [], [StreamData, :bind]}, [], [gen, {:fn, [], [{:->, [], [[arg], acc]}]}]}
+      end
 
-        defp generation_bound do
-          args =
-            Enum.map(unquote(types), fn {arg, gen} ->
-              {Macro.var(arg, nil), fix_gen(gen)}
-            end)
-
-          init_args = Enum.map(args, &elem(&1, 0))
-
-          Enum.reduce(args, generation_leaf(init_args), &generation_clause/2)
-        end
-
-        defmacrop do_generation, do: generation_bound()
-
-        @doc "See `#{inspect(__MODULE__)}.__generator__/1`"
-        @spec __generator__() :: StreamData.t(%__MODULE__{})
-        def __generator__, do: __generator__(%__MODULE__{})
-
-        {usage, declarations} =
-          cond do
-            Module.has_attribute?(__MODULE__, :__estructura__) ->
-              {"`use Estructura`",
-               [
-                 shape:
-                   inspect(Module.get_attribute(__MODULE__, :__estructura__),
-                     pretty: true,
-                     width: 80
-                   )
-               ]}
-
-            Module.has_attribute?(__MODULE__, :__estructura_nested__) ->
-              estructura = Module.get_attribute(__MODULE__, :__estructura_nested__)
-              matcher = ~r/\n([[:space:]]*def.*end)\n]/usm
-
-              result =
-                [:coerce, :validate]
-                |> Enum.map(fn what ->
-                  {what,
-                   estructura
-                   |> Map.get(what, [])
-                   |> Enum.flat_map(fn {_who, ast} ->
-                     matcher
-                     |> Regex.scan(Macro.to_string(ast), capture: :all_but_first)
-                     |> case do
-                       [list] when is_list(list) -> list
-                       _ -> []
-                     end
-                   end)
-                   |> Enum.join("\n")}
-                end)
-                |> Keyword.put(:shape, inspect(estructura.shape, pretty: true, width: 80))
-
-              {"`use Estructura.Nested`", result}
-
-            true ->
-              {"N/A", []}
-          end
-
-        declarations =
-          declarations
-          |> Enum.reject(&match?({_, ""}, &1))
-          |> Enum.map_join("\n", fn {key, declaration} ->
-            "\n## #{key}\n```elixir\n#{declaration}\n```\n"
+      defp generation_bound do
+        args =
+          Enum.map(unquote(types), fn {arg, gen} ->
+            {Macro.var(arg, nil), fix_gen(gen)}
           end)
 
-        @doc ~s"""
-        Returns the generator to be used in `StreamData`-powered property testing, based
-          on the specification given to #{usage}, which contained
+        init_args = Enum.map(args, &elem(&1, 0))
 
-        #{declarations}
+        Enum.reduce(args, generation_leaf(init_args), &generation_clause/2)
+      end
 
-        The argument given would be used as a template to generate new values.
-        """
-        @spec __generator__(%__MODULE__{}) :: StreamData.t(%__MODULE__{})
-        def __generator__(%__MODULE__{} = this) do
-          do_generation()
-          |> StreamData.map(&Tuple.to_list/1)
-          |> StreamData.map(&Enum.zip(unquote(fields), &1))
-          |> StreamData.map(&struct(this, &1))
+      defmacrop do_generation, do: generation_bound()
+
+      {usage, declarations} =
+        cond do
+          Module.has_attribute?(__MODULE__, :__estructura__) ->
+            {"`use Estructura`",
+             [
+               shape:
+                 inspect(Module.get_attribute(__MODULE__, :__estructura__),
+                   pretty: true,
+                   width: 80
+                 )
+             ]}
+
+          Module.has_attribute?(__MODULE__, :__estructura_nested__) ->
+            estructura = Module.get_attribute(__MODULE__, :__estructura_nested__)
+            matcher = ~r/\n([[:space:]]*def.*end)\n]/usm
+
+            result =
+              [:coerce, :validate]
+              |> Enum.map(fn what ->
+                {what,
+                 estructura
+                 |> Map.get(what, [])
+                 |> Enum.flat_map(fn {_who, ast} ->
+                   matcher
+                   |> Regex.scan(Macro.to_string(ast), capture: :all_but_first)
+                   |> case do
+                     [list] when is_list(list) -> list
+                     _ -> []
+                   end
+                 end)
+                 |> Enum.join("\n")}
+              end)
+              |> Keyword.put(:shape, inspect(estructura.shape, pretty: true, width: 80))
+
+            {"`use Estructura.Nested`", result}
+
+          true ->
+            {"N/A", []}
         end
 
-        defoverridable __generator__: 1
+      declarations =
+        declarations
+        |> Enum.reject(&match?({_, ""}, &1))
+        |> Enum.map_join("\n", fn {key, declaration} ->
+          "\n## #{key}\n```elixir\n#{declaration}\n```\n"
+        end)
+
+      @doc "See `#{inspect(__MODULE__)}.__generator__/1`"
+      @spec __generator__() :: StreamData.t(%__MODULE__{})
+      def __generator__, do: __generator__(%__MODULE__{})
+
+      @doc ~s"""
+      Returns the generator to be used in `StreamData`-powered property testing, based
+        on the specification given to #{usage}, which contained
+
+      #{declarations}
+
+      The argument given would be used as a template to generate new values.
+      """
+      @spec __generator__(%__MODULE__{}) :: StreamData.t(%__MODULE__{})
+      def __generator__(%__MODULE__{} = this) do
+        do_generation()
+        |> StreamData.map(&Tuple.to_list/1)
+        |> StreamData.map(&Enum.zip(unquote(fields), &1))
+        |> StreamData.map(&struct(this, &1))
       end
+
+      defoverridable __generator__: 1
     end
   end
 

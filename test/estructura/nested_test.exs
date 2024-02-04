@@ -41,6 +41,8 @@ defmodule Estructura.Nested.Test do
       assert Enum.all?(user.address.street.name, &is_binary/1)
       assert is_binary(user.address.street.house)
       assert is_float(user.data.age)
+      assert is_struct(user.created_at, DateTime)
+      assert is_struct(user.birthday, Date)
     end
   end
 
@@ -59,6 +61,8 @@ defmodule Estructura.Nested.Test do
                  city: _,
                  street: [*: Estructura.User.Address.Street, house: _, name: _]
                ],
+               birthday: _,
+               created_at: _,
                data: [*: Estructura.User.Data, age: _],
                name: _
              ] = Estructura.Transformer.transform(user)
@@ -69,6 +73,8 @@ defmodule Estructura.Nested.Test do
                address: [
                  street: [house: _, name: _]
                ],
+               birthday: _,
+               created_at: _,
                data: [age: _],
                name: _
              ] = Estructura.Transformer.transform(user, except: [:city], type: false)
@@ -91,6 +97,8 @@ defmodule Estructura.Nested.Test do
           city: user.address.city,
           street: %{name: user.address.street.name, house: user.address.street.house}
         },
+        birthday: user.birthday,
+        created_at: user.created_at,
         data: %{age: user.data.age}
       }
 
@@ -102,6 +110,8 @@ defmodule Estructura.Nested.Test do
           ciudad: user.address.city,
           street: %{nombre: user.address.street.name, casa: user.address.street.house}
         },
+        birthday: user.birthday,
+        created_at: user.created_at,
         data: %{age: user.data.age}
       }
 
@@ -122,6 +132,8 @@ defmodule Estructura.Nested.Test do
         address_city: user.address.city,
         address_street_name: user.address.street.name,
         address_street_house: user.address.street.house,
+        birthday: user.birthday,
+        created_at: user.created_at,
         data_age: user.data.age
       }
 
@@ -133,7 +145,9 @@ defmodule Estructura.Nested.Test do
         :addresscity => user.address.city,
         "address_street_nombre" => user.address.street.name,
         "address_street_casa" => user.address.street.house,
-        :data_age => user.data.age
+        :data_age => user.data.age,
+        :created_at => user.created_at,
+        "birthday" => user.birthday
       }
 
       assert {:error,

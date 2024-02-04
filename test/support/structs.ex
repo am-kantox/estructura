@@ -13,8 +13,8 @@ defmodule Estructura.LazyInst do
   def current_time("42"), do: {:ok, DateTime.utc_now()}
 
   defstruct __lazy_data__: "42",
-    foo: Estructura.Lazy.new(&Estructura.LazyInst.parse_int/1),
-    bar: Estructura.Lazy.new(&Estructura.LazyInst.current_time/1, 100)
+            foo: Estructura.Lazy.new(&Estructura.LazyInst.parse_int/1),
+            bar: Estructura.Lazy.new(&Estructura.LazyInst.current_time/1, 100)
 end
 
 defmodule Estructura.Full do
@@ -22,12 +22,17 @@ defmodule Estructura.Full do
 
   @foo_range 0..1_000
 
-  use Estructura, access: true, coercion: [:foo], validation: true, enumerable: true, collectable: :bar,
+  use Estructura,
+    access: true,
+    coercion: [:foo],
+    validation: true,
+    enumerable: true,
+    collectable: :bar,
     generator: [
       foo: {StreamData, :integer, [@foo_range]},
       bar: {StreamData, :string, [:alphanumeric]},
-      baz: {StreamData, :fixed_map,
-        [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]},
+      baz:
+        {StreamData, :fixed_map, [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]},
       zzz: &Estructura.Full.zzz_generator/0
     ]
 
@@ -43,13 +48,16 @@ defmodule Estructura.Full do
   @impl Estructura.Full.Coercible
   def coerce_foo(value) when is_integer(value), do: {:ok, value}
   def coerce_foo(value) when is_float(value), do: {:ok, round(value)}
+
   def coerce_foo(value) when is_binary(value) do
     case Integer.parse(value) do
       {value, ""} -> {:ok, value}
       _ -> {:error, "#{value} is not a valid integer value"}
     end
   end
-  def coerce_foo(value), do: {:error, "Cannot coerce value given for `foo` field (#{inspect(value)})"}
+
+  def coerce_foo(value),
+    do: {:error, "Cannot coerce value given for `foo` field (#{inspect(value)})"}
 
   @impl Estructura.Full.Validatable
   def validate_foo(value) when value >= 0, do: {:ok, value}
@@ -80,6 +88,7 @@ defmodule Estructura.User do
   use Estructura.Nested
 
   shape %{
+    created_at: :datetime,
     name: :string,
     address: %{city: :string, street: %{name: [:string], house: :string}},
     data: %{age: :float}
@@ -123,15 +132,18 @@ defmodule Estructura.User do
 
   use Estructura.Nested
 
-  shape %{
+  shape(%{
+    created_at: :datetime,
+    birthday: :date,
     name: :string,
     address: %{city: :string, street: %{name: [:string], house: :string}},
     data: %{age: :float}
-  }
+  })
 
   coerce do
     def data.age(age) when is_float(age), do: {:ok, age}
     def data.age(age) when is_integer(age), do: {:ok, 1.0 * age}
+
     def data.age(age) when is_binary(age) do
       age
       |> Float.parse()
@@ -141,6 +153,19 @@ defmodule Estructura.User do
         :error -> {:ok, 0.0}
       end
     end
+
+    def created_at(%DateTime{} = value), do: {:ok, value}
+
+    def created_at(value) when is_binary(value) do
+      case DateTime.from_iso8601(value) do
+        {:ok, result, 0} -> {:ok, result}
+        {:ok, _result, offset} -> {:error, "Unsupported offset (#{offset})"}
+        error -> error
+      end
+    end
+
+    def birthday(%Date{} = value), do: {:ok, value}
+    def birthday(value) when is_binary(value), do: Date.from_iso8601(value)
   end
 
   validate do

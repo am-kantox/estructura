@@ -150,11 +150,11 @@ defimpl Estructura.Transformer, for: BitString do
   end
 end
 
-# defimpl Estructura.Transformer, for: [Date, Time, NaiveDateTime, DateTime] do
-#   def transform(input, _options) do
-#     @for.to_iso8601(value)
-#   end
-# end
+defimpl Estructura.Transformer, for: [Date, Time, NaiveDateTime, DateTime] do
+  def transform(value, _options) do
+    @for.to_iso8601(value)
+  end
+end
 
 # defimpl Estructura.Transformer, for: Decimal do
 #   def transform(input, _options) do

@@ -159,4 +159,33 @@ defmodule Estructura.Nested.Test do
       assert Enum.sort(key) == ["address_street_casa", "address_street_nombre", "addresscity"]
     end
   end
+
+  property "Flattenable" do
+    check all %User{} = user <- User.__generator__() do
+      raw_user_ok = %{
+        name: user.name,
+        address_city: user.address.city,
+        address_street_name: user.address.street.name,
+        address_street_house: user.address.street.house,
+        birthday: user.birthday,
+        created_at: user.created_at,
+        data_age: user.data.age
+      }
+
+      raw_user_flatten =
+        if user.address.street.name == [] do
+          raw_user_ok
+        else
+          user.address.street.name
+          |> Enum.with_index()
+          |> Enum.reduce(Map.delete(raw_user_ok, :address_street_name), fn {v, idx}, acc ->
+            Map.put(acc, "address_street_name_#{idx}", v)
+          end)
+        end
+        |> Map.new(fn {k, v} -> {to_string(k), v} end)
+
+      assert {:ok, ^user} = User.cast(raw_user_ok, split: true)
+      assert ^raw_user_flatten = Estructura.Flattenable.flatten(user)
+    end
+  end
 end

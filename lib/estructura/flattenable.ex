@@ -1,12 +1,10 @@
 defmodule Estructura.Flattener do
   @moduledoc false
   def flatten(map_or_kw, acc) do
-    Enum.reduce(map_or_kw, acc, fn {k, v}, %{acc: acc, coupler: coupler, key: key} ->
-      v =
-        if is_nil(Enumerable.impl_for(v)) and is_struct(v) and
-             not is_nil(Estructura.Flattenable.impl_for(v)),
-           do: Map.from_struct(v),
-           else: v
+    map_or_kw
+    |> maybe_fix()
+    |> Enum.reduce(acc, fn {k, v}, %{acc: acc, coupler: coupler, key: key} ->
+      v = maybe_fix(v)
 
       if is_nil(Enumerable.impl_for(v)) or v == [] or v == %{} do
         %{
@@ -16,16 +14,29 @@ defmodule Estructura.Flattener do
         }
       else
         v
-        |> Enum.with_index()
-        |> Enum.map(fn
-          {{k, v}, _idx} -> {k, v}
-          {v, k} -> {k, v}
-        end)
         |> flatten(%{acc: acc, coupler: coupler, key: [k | key]})
         |> Map.update!(:key, &tl/1)
       end
     end)
   end
+
+  defp maybe_fix(%_{} = struct) do
+    if is_nil(Enumerable.impl_for(struct)) and
+         not is_nil(Estructura.Flattenable.impl_for(struct)),
+       do: Map.from_struct(struct),
+       else: struct
+  end
+
+  defp maybe_fix(list) when is_list(list) do
+    list
+    |> Enum.with_index()
+    |> Enum.map(fn
+      {{k, v}, _idx} -> {k, v}
+      {v, k} -> {k, v}
+    end)
+  end
+
+  defp maybe_fix(any), do: any
 
   def filter({key, _}, options), do: filter(key, options)
 

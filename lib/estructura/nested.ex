@@ -401,6 +401,7 @@ defmodule Estructura.Nested do
         end
 
         @derive Estructura.Transformer
+        @derive Estructura.Flattenable
 
         defstruct unquote(Macro.escape(struct))
 

@@ -152,12 +152,15 @@ defmodule Estructura.Nested do
   end
 
   @doc false
-  @spec from_term(module(), map() | [map()]) :: {:ok, struct()} | {:error, Exception.t()}
-  def from_term(module, list) when is_list(list),
-    do: Enum.map(list, &from_term(module, &1))
+  @spec from_term(module(), map() | [map()], keyword()) ::
+          {:ok, struct()} | {:error, Exception.t()}
+  def from_term(module, map, options \\ [])
 
-  def from_term(module, %{} = map) do
-    {result, [], errors} = do_from_map({struct!(module, []), [], []}, map)
+  def from_term(module, list, options) when is_list(list),
+    do: Enum.map(list, &from_term(module, &1, options))
+
+  def from_term(module, %{} = map, options) do
+    {result, [], errors} = do_from_map({struct!(module, []), [], []}, map, options)
 
     case errors do
       [] -> {:ok, result}
@@ -165,8 +168,9 @@ defmodule Estructura.Nested do
     end
   end
 
+  defp atomize(key) when is_list(key), do: Enum.map(key, &atomize/1)
   defp atomize(key) when is_atom(key), do: key
-  defp atomize(key) when is_binary(key), do: String.to_atom(key)
+  defp atomize(key) when is_binary(key), do: String.to_existing_atom(key)
 
   defp squeeze([], acc), do: acc
 
@@ -187,29 +191,55 @@ defmodule Estructura.Nested do
   defp trim_left([list, []]), do: list
   defp trim_left([[h | list], [h | lead]]), do: trim_left([list, lead])
 
-  @spec do_from_map({struct(), [atom()], [Exception.t()]}, map()) ::
+  @spec do_from_map({struct(), [atom()], [Exception.t()]}, map(), keyword()) ::
           {struct(), [atom()], [Exception.t()]}
-  defp do_from_map(acc, map) do
+  defp do_from_map(acc, map, options) do
     Enum.reduce(map, acc, fn
       {key, %{} = map}, {into, path, errors} ->
-        {into, [_ | path], errors} = do_from_map({into, [atomize(key) | path], errors}, map)
+        {into, [_ | path], errors} =
+          do_from_map({into, [atomize(key) | path], errors}, map, options)
+
         {into, path, errors}
 
       {key, value}, {into, path, errors} ->
-        key_path = Enum.reverse([atomize(key) | path])
+        key = to_string(key)
 
-        try do
-          {put_in(into, key_path, value), path, errors}
-        rescue
-          e in [ArgumentError] ->
+        {delim, num} =
+          case Keyword.get(options, :split, false) do
+            false -> {"_", 1}
+            true -> {"_", -1}
+            num when is_integer(num) and num > 1 -> {"_", num}
+            delim when is_binary(delim) -> {delim, -1}
+            {delim, num} when is_binary(delim) and is_integer(num) and num > 1 -> {delim, num}
+          end
+
+        num = if num < 1, do: Enum.count(String.split(key, delim)), else: num
+        key_paths = Enum.map(1..num//1, &String.split(key, "_", parts: &1))
+
+        Enum.reduce_while(key_paths, {false, into}, fn key_path, {false, into} ->
+          try do
+            key_path = Enum.reverse(path) ++ atomize(key_path)
+            {:halt, {true, put_in(into, key_path, value)}}
+          rescue
+            _e in [ArgumentError, KeyError] -> {:cont, {false, into}}
+          end
+        end)
+        |> case do
+          {true, into} ->
+            {into, path, errors}
+
+          {false, into} ->
+            key = [key | path] |> Enum.reverse() |> Enum.join(".")
+
             {into, path,
              [
-               %KeyError{message: e.message, key: Enum.join(key_path, "."), term: into.__struct__}
+               %KeyError{
+                 message: "Unknown key in nested struct: ‹#{key}›",
+                 key: key,
+                 term: into.__struct__
+               }
                | errors
              ]}
-
-          e in [KeyError] ->
-            {into, path, [e | errors]}
         end
     end)
   end
@@ -365,13 +395,15 @@ defmodule Estructura.Nested do
         @doc """
         Casts the map representation as given to `Estructura.Nested.shape/1` to
           the nested `Estructura` instance.
-        """
-        def cast(%{} = content),
-          do: Estructura.Nested.from_term(unquote(module), content)
 
-        def cast!(%{} = content) do
+        If `split: true` is passed as an option, it will attempt to put `foo_bar` into nested `%{foo: %{bar: _}}`
+        """
+        def cast(%{} = content, options \\ []),
+          do: Estructura.Nested.from_term(unquote(module), content, options)
+
+        def cast!(%{} = content, options \\ []) do
           content
-          |> cast()
+          |> cast(options)
           |> case do
             {:ok, cast} -> cast
             {:error, error} -> raise error

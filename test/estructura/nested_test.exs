@@ -114,4 +114,35 @@ defmodule Estructura.Nested.Test do
       assert Enum.sort(key) == ["address.ciudad", "address.street.casa", "address.street.nombre"]
     end
   end
+
+  property "Guessed Casting" do
+    check all %User{} = user <- User.__generator__() do
+      raw_user_ok = %{
+        name: user.name,
+        address_city: user.address.city,
+        address_street_name: user.address.street.name,
+        address_street_house: user.address.street.house,
+        data_age: user.data.age
+      }
+
+      assert {:error, %KeyError{}} = User.cast(raw_user_ok)
+      assert {:ok, ^user} = User.cast(raw_user_ok, split: true)
+
+      raw_user_ko = %{
+        "name" => user.name,
+        :addresscity => user.address.city,
+        "address_street_nombre" => user.address.street.name,
+        "address_street_casa" => user.address.street.house,
+        :data_age => user.data.age
+      }
+
+      assert {:error,
+              %KeyError{
+                key: key,
+                term: Estructura.User
+              }} = User.cast(raw_user_ko, split: true)
+
+      assert Enum.sort(key) == ["address_street_casa", "address_street_nombre", "addresscity"]
+    end
+  end
 end

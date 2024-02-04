@@ -18,6 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.2.0` — `Estructura.Nested` would attempt to split keys by a delimiter if instructed
 * `1.1.0` — `Estructura.Tree` to hold an AST structure, like XML
 * `1.0.0` — Elixir v1.16 and deps
 * `0.6.0` — `Estructura.Transform` to produce squeezed representations of nested structs

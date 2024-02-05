@@ -47,7 +47,8 @@ defmodule Estructura.Hooks do
           def put!(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
             case put(data, unquote(key), value) do
               {:ok, updated_data} -> updated_data
-              {:error, reason} -> raise ArgumentError, reason
+              {:error, reason} when is_binary(reason) -> raise ArgumentError, reason
+              {:error, reason} -> raise ArgumentError, inspect(reason)
             end
           end
 
@@ -196,6 +197,18 @@ defmodule Estructura.Hooks do
                     when value: any()
         end
       end
+
+    # shape =
+    #   with true <- Module.open?(module),
+    #        %{} = nested <- Module.get_attribute(module, :__estructura_nested__),
+    #        do: Map.get(nested, :shape),
+    #        else: (_ -> %{})
+
+    # IO.inspect(
+    #   fields: fields,
+    #   all_fields: all_fields,
+    #   shape: shape
+    # )
 
     Module.create(coercible, [doc | callbacks], __ENV__)
 

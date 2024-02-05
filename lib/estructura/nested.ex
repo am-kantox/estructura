@@ -126,7 +126,7 @@ defmodule Estructura.Nested do
         Module.put_attribute(
           __MODULE__,
           :__estructura_nested__,
-          Map.put(nested, unquote(name), opts)
+          Map.update(nested, unquote(name), opts, &(&1 ++ opts))
         )
       end
     end
@@ -278,6 +278,26 @@ defmodule Estructura.Nested do
      [
        {:@, meta, [{:impl, [], [true]}]},
        {:def, meta, [{:"#{action}_#{def}", submeta, args} | rest]}
+     ]}
+  end
+
+  def reshape({:defdelegate, meta, [{def, submeta, args}, [to: destination]]}, action, module) do
+    destination =
+      case destination do
+        nickname when is_atom(nickname) ->
+          Module.concat(Estructura.Coercers, nickname |> Atom.to_string() |> Macro.camelize())
+
+        other ->
+          other
+      end
+
+    {acc, def} = expand_def(module, def)
+    wrapped_call = [[do: {{:., submeta, [destination, action]}, submeta, args}]]
+
+    {{acc, {action, def}},
+     [
+       {:@, meta, [{:impl, [], [true]}]},
+       {:def, meta, [{:"#{action}_#{def}", submeta, args} | wrapped_call]}
      ]}
   end
 

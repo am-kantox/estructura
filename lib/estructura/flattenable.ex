@@ -15,11 +15,11 @@ defprotocol Estructura.Flattenable do
     name: nil
   }
 
-  iex|%_{}|2 ▶ Estructura.Flattenable.flatten %Estructura.User{}, coupler: "-", except: ~w|address-street data-age|
+  iex|%_{}|2 ▶ Estructura.Flattenable.flatten(%Estructura.User{}, coupler: "-", except: ~w|address-street data-age|)
   %{"address-city" => nil, "birthday" => nil, "created_at" => nil, "name" => nil}
-  iex|%_{}|3 ▶ Estructura.Flattenable.flatten %Estructura.User{}, only: ~w|address_street data_age|
+  iex|%_{}|3 ▶ Estructura.Flattenable.flatten(%Estructura.User{}, only: ~w|address_street data_age|)
   %{"address_street_house" => nil, "data_age" => nil}
-  iex|%_{}|4 ▶ Estructura.Flattenable.flatten %Estructura.User{}, only: ~w|address|
+  iex|%_{}|4 ▶ Estructura.Flattenable.flatten(%Estructura.User{}, only: ~w|address|)
   %{"address_city" => nil, "address_street_house" => nil}
   ```
 

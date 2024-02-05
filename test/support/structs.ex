@@ -108,6 +108,11 @@ defmodule Estructura.User do
     end
   end
 
+  coerce do
+    def name(value) when is_binary(value), do: {:ok, value}
+    def name(value) when is_atom(value), do: {:ok, Atom.to_string(value)}
+  end
+
   validate do
     def address.street.house(house), do: {:ok, house}
   end
@@ -154,18 +159,15 @@ defmodule Estructura.User do
       end
     end
 
-    def created_at(%DateTime{} = value), do: {:ok, value}
-
-    def created_at(value) when is_binary(value) do
-      case DateTime.from_iso8601(value) do
-        {:ok, result, 0} -> {:ok, result}
-        {:ok, _result, offset} -> {:error, "Unsupported offset (#{offset})"}
-        error -> error
-      end
-    end
+    defdelegate created_at(value), to: :datetime
 
     def birthday(%Date{} = value), do: {:ok, value}
     def birthday(value) when is_binary(value), do: Date.from_iso8601(value)
+  end
+
+  coerce do
+    def name(value) when is_binary(value), do: {:ok, value}
+    def name(value) when is_atom(value), do: {:ok, Atom.to_string(value)}
   end
 
   validate do

@@ -1,12 +1,7 @@
-locals_without_parens = [
-  all: :*,
-  check: 1,
-  check: 2,
-  property: 1,
-  property: 2
-]
+locals_without_parens = [shape: 1]
 
 [
+  import_deps: [:stream_data],
   inputs: [
     ".formatter.exs",
     "mix.exs",

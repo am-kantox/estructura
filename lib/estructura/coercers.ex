@@ -38,6 +38,7 @@ defmodule Estructura.Coercers.Date do
   @impl Estructura.Coercer
 
   def coerce(%Date{} = value), do: {:ok, value}
+  def coerce(%DateTime{} = value), do: {:ok, DateTime.to_date(value)}
 
   def coerce(<<_::binary-size(4), ?-, _::binary-size(2), ?-, _::binary-size(2)>> = value),
     do: Date.from_iso8601(value)

@@ -39,8 +39,21 @@ defmodule Estructura.Coercers.Date do
 
   def coerce(%Date{} = value), do: {:ok, value}
 
+  def coerce(<<_::binary-size(4), ?-, _::binary-size(2), ?-, _::binary-size(2)>> = value),
+    do: Date.from_iso8601(value)
+
+  def coerce(<<y::binary-size(4), ?/, m::binary-size(2), ?/, d::binary-size(2)>>),
+    do: coerce(y <> <<?->> <> m <> <<?->> <> d)
+
+  def coerce(<<y::binary-size(4), m::binary-size(2), d::binary-size(2)>>),
+    do: coerce(y <> <<?->> <> m <> <<?->> <> d)
+
   def coerce(value) when is_binary(value) do
-    Date.from_iso8601(value)
+    case DateTime.from_iso8601(value) do
+      {:ok, value, 0} -> {:ok, DateTime.to_date(value)}
+      {:ok, _value, offset} -> {:error, "Unsupported offset: ‹#{offset}›"}
+      error -> error
+    end
   end
 end
 

@@ -160,9 +160,7 @@ defmodule Estructura.User do
     end
 
     defdelegate created_at(value), to: :datetime
-
-    def birthday(%Date{} = value), do: {:ok, value}
-    def birthday(value) when is_binary(value), do: Date.from_iso8601(value)
+    defdelegate birthday(value), to: :date
   end
 
   coerce do

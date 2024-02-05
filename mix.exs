@@ -95,9 +95,23 @@ defmodule Estructura.MixProject do
       groups_for_modules: [
         # Estructura,
         # Estructura.Nested,
+        # Estructura.Tree,
+        Protocols: [
+          Estructura.Flattenable,
+          Estructura.Transformer
+        ],
+        Generators: [
+          Estructura.StreamData
+        ],
         Lazy: [
           Estructura.Lazy,
           Estructura.LazyMap
+        ],
+        Coercers: [
+          Estructura.Coercer,
+          Estructura.Coercers.Date,
+          Estructura.Coercers.Datetime,
+          Estructura.Coercers.Integer
         ],
         Internals: [
           Estructura.Config

@@ -36,7 +36,11 @@ defimpl Estructura.Flattenable, for: Any do
     quote do
       defimpl Estructura.Flattenable, for: unquote(module) do
         def flatten(input, options) do
-          options = Keyword.merge(unquote(options), options)
+          options =
+            unquote(options)
+            |> Keyword.merge(options)
+            |> Keyword.update(:only, [], fn only -> Enum.map(only, &to_string/1) end)
+            |> Keyword.update(:except, [], fn except -> Enum.map(except, &to_string/1) end)
 
           input
           |> Map.from_struct()

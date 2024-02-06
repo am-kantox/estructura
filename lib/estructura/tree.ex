@@ -26,12 +26,15 @@ defmodule Estructura.Tree do
               ]
             ]}
          ]},
-      content: {StreamData, :tree, [{StreamData, :fixed_list, [[]]}, &Estructura.Tree.child_gen/1]}
+      content:
+        {StreamData, :tree, [{StreamData, :fixed_list, [[]]}, &Estructura.Tree.child_gen/1]}
     ]
 
   if {:module, Jason} == Code.ensure_compiled(Jason) do
-    @derive {Jason.Encoder, only: [:name, :attributes, :content]}
+    @derive {Jason.Encoder, only: ~w|name attributes content|a}
   end
+
+  @derive {Estructura.Flattenable, only: ~w|name attributes content|a}
 
   defstruct name: nil, attributes: %{}, content: []
 
@@ -190,7 +193,8 @@ defmodule Estructura.Tree do
         {1, nil},
         {2, StreamData.string(:alphanumeric)},
         {7, Estructura.Tree.__generator__()}
-        ]),
-    max_length: @max_children)
+      ]),
+      max_length: @max_children
+    )
   end
 end

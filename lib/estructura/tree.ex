@@ -2,6 +2,9 @@ defmodule Estructura.Tree do
   @moduledoc """
   The implementation of `Estructura` ready to work with tree AST-like structure
   """
+
+  @max_children Application.compile_env(:estructura, :tree_children_generate_count, 7)
+
   use Estructura,
     access: true,
     coercion: true,
@@ -11,8 +14,19 @@ defmodule Estructura.Tree do
     generator: [
       name: {StreamData, :string, [:alphanumeric]},
       attributes:
-        {StreamData, :fixed_map, [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]},
-      content: {StreamData, :list_of, [{Estructura.Tree, :__generator__}]}
+        {StreamData, :map_of,
+         [
+           {StreamData, :atom, [:alphanumeric]},
+           {StreamData, :one_of,
+            [
+              [
+                {StreamData, :integer},
+                {StreamData, :boolean},
+                {StreamData, :string, [:alphanumeric]}
+              ]
+            ]}
+         ]},
+      content: {StreamData, :tree, [{StreamData, :fixed_list, [[]]}, &Estructura.Tree.child_gen/1]}
     ]
 
   if {:module, Jason} == Code.ensure_compiled(Jason) do
@@ -168,4 +182,15 @@ defmodule Estructura.Tree do
   defp ast_content(nil), do: nil
   defp ast_content(text_node) when is_binary(text_node), do: text_node
   defp ast_content(list) when is_list(list), do: Enum.map(list, &ast_content/1)
+
+  @doc false
+  def child_gen(_child) do
+    StreamData.list_of(
+      StreamData.frequency([
+        {1, nil},
+        {2, StreamData.string(:alphanumeric)},
+        {7, Estructura.Tree.__generator__()}
+        ]),
+    max_length: @max_children)
+  end
 end

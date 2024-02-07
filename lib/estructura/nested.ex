@@ -400,11 +400,26 @@ defmodule Estructura.Nested do
     struct = struct_ast(fields)
     generator = generator_ast(fields)
 
+    need_jason? =
+      nested? or
+        (Module.open?(module) and
+           module |> Module.get_attribute(:__estructura_nested__) |> Map.get(:jason, true))
+
+    need_transformer? =
+      nested? or
+        (Module.open?(module) and
+           module |> Module.get_attribute(:__estructura_nested__) |> Map.get(:transformer, true))
+
+    need_flattenable? =
+      nested? or
+        (Module.open?(module) and
+           module |> Module.get_attribute(:__estructura_nested__) |> Map.get(:flattenable, true))
+
     [
       quote do
         if unquote(nested?), do: @moduledoc(false)
 
-        if {:module, Jason} == Code.ensure_compiled(Jason) do
+        if unquote(need_jason?) and {:module, Jason} == Code.ensure_compiled(Jason) do
           @derive Jason.Encoder
 
           @doc "Safely parses the json, applying all the specified validations and coercions"
@@ -420,8 +435,8 @@ defmodule Estructura.Nested do
             do: input |> Jason.decode!() |> unquote(module).cast!()
         end
 
-        @derive Estructura.Transformer
-        @derive Estructura.Flattenable
+        if unquote(need_transformer?), do: @derive(Estructura.Transformer)
+        if unquote(need_flattenable?), do: @derive(Estructura.Flattenable)
 
         defstruct unquote(Macro.escape(struct))
 

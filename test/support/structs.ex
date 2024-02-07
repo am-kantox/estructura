@@ -135,7 +135,7 @@ defmodule Estructura.User do
 
   """
 
-  use Estructura.Nested
+  use Estructura.Nested, jason: true
 
   shape(%{
     created_at: :datetime,

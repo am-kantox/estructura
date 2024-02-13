@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.2.5"
+  @version "1.2.6"
 
   def project do
     [
@@ -45,7 +45,7 @@ defmodule Estructura.MixProject do
 
   defp deps do
     [
-      {:stream_data, "~> 0.5"},
+      {:stream_data, "~> 0.5", only: [:test, :dev, :ci]},
       {:jason, "~> 1.0", optional: true},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},

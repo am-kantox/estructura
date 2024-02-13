@@ -13,6 +13,12 @@ defmodule Estructura.StreamData do
   """
   @opaque t(a) :: %StreamData{generator: generator_fun(a)} | Enumerable.t()
 
+  @doc "Identity function as a stream data generator"
+  @spec id(keyword()) :: StreamData.t((term() -> term()))
+  def id(_options \\ []) do
+    StreamData.constant(&Function.identity/1)
+  end
+
   @doc "Helper to generate _unshrinkable_ streams as per `Stream.iterate/2`."
   @spec iterate(value, (value -> value)) :: StreamData.t(value) when value: term()
   def iterate(initial_value, next_fun) when is_function(next_fun, 1) do

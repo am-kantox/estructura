@@ -146,7 +146,10 @@ defmodule Estructura.Tree do
       |> Map.split(~w|name attributes content| ++ ~w|name attributes content|a)
       |> case do
         {map, empty} when %{} == empty ->
-          Map.new(map, fn {k, v} -> {String.to_existing_atom(k), v} end)
+          Map.new(map, fn
+            {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
+            {k, v} when is_atom(k) -> {k, v}
+          end)
 
         {_, non_empty} ->
           keys = non_empty |> Map.keys() |> Enum.map(&Enum.join(key_prefix ++ [&1], "."))

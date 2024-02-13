@@ -143,10 +143,10 @@ defmodule Estructura.Tree do
   def coerce(%{} = map, key_prefix) do
     result =
       map
-      |> Map.split([:name, :attributes, :content])
+      |> Map.split(~w|name attributes content| ++ ~w|name attributes content|a)
       |> case do
         {map, empty} when %{} == empty ->
-          map
+          Map.new(map, fn {k, v} -> {String.to_existing_atom(k), v} end)
 
         {_, non_empty} ->
           keys = non_empty |> Map.keys() |> Enum.map(&Enum.join(key_prefix ++ [&1], "."))

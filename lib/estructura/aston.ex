@@ -1,7 +1,9 @@
-defmodule Estructura.Tree do
+defmodule Estructura.Aston do
   @moduledoc """
   The implementation of `Estructura` ready to work with tree AST-like structure
   """
+
+  alias Estructura.Aston
 
   @max_children Application.compile_env(:estructura, :tree_children_generate_count, 7)
 
@@ -26,8 +28,7 @@ defmodule Estructura.Tree do
               ]
             ]}
          ]},
-      content:
-        {StreamData, :tree, [{StreamData, :fixed_list, [[]]}, &Estructura.Tree.child_gen/1]}
+      content: {StreamData, :tree, [{StreamData, :fixed_list, [[]]}, &Aston.child_gen/1]}
     ]
 
   if {:module, Jason} == Code.ensure_compiled(Jason) do
@@ -39,13 +40,13 @@ defmodule Estructura.Tree do
   defstruct name: nil, attributes: %{}, content: []
 
   @type t :: %{
-          __struct__: Estructura.Tree,
+          __struct__: Aston,
           name: atom() | binary(),
           attributes: map(),
-          content: nil | binary() | [binary() | Estructura.Tree.t()]
+          content: nil | binary() | [binary() | Aston.t()]
         }
 
-  @impl Estructura.Tree.Coercible
+  @impl Aston.Coercible
   def coerce_name(value) when is_binary(value), do: {:ok, value}
 
   def coerce_name(value) when is_list(value) do
@@ -62,7 +63,7 @@ defmodule Estructura.Tree do
     end
   end
 
-  @impl Estructura.Tree.Coercible
+  @impl Aston.Coercible
   def coerce_attributes(nil), do: {:ok, %{}}
   def coerce_attributes(value) when is_map(value), do: {:ok, value}
   def coerce_attributes(value) when is_list(value), do: {:ok, Map.new(value)}
@@ -71,7 +72,7 @@ defmodule Estructura.Tree do
   def coerce_attributes(value),
     do: {:error, "Cannot coerce value given for `attributes` field (#{inspect(value)})"}
 
-  @impl Estructura.Tree.Coercible
+  @impl Aston.Coercible
   def coerce_content(nil), do: {:ok, nil}
   def coerce_content(text) when is_binary(text), do: {:ok, text}
   def coerce_content(value), do: value |> List.wrap() |> do_coerce_content({[], []})
@@ -84,7 +85,7 @@ defmodule Estructura.Tree do
   defp do_coerce_content([head | rest], {good, bad}) when is_binary(head),
     do: do_coerce_content(rest, {[head | good], bad})
 
-  defp do_coerce_content([%Estructura.Tree{} = head | rest], {good, bad}),
+  defp do_coerce_content([%Aston{} = head | rest], {good, bad}),
     do: do_coerce_content(rest, {[head | good], bad})
 
   defp do_coerce_content([%{} = head | rest], {good, bad}) do
@@ -97,17 +98,17 @@ defmodule Estructura.Tree do
   defp do_coerce_content([head | rest], {good, bad}),
     do: do_coerce_content(rest, {good, [head | bad]})
 
-  @impl Estructura.Tree.Validatable
+  @impl Aston.Validatable
   def validate_name(value) when is_binary(value), do: {:ok, value}
   def validate_name(value), do: {:error, ":name must be a binary, ‹#{inspect(value)}› given"}
 
-  @impl Estructura.Tree.Validatable
+  @impl Aston.Validatable
   def validate_attributes(value) when is_map(value), do: {:ok, value}
 
   def validate_attributes(value),
     do: {:error, ":attributes must be a map, ‹#{inspect(value)}› given"}
 
-  @impl Estructura.Tree.Validatable
+  @impl Aston.Validatable
   def validate_content(nil), do: {:ok, nil}
   def validate_content(text) when is_binary(text), do: {:ok, text}
   def validate_content(value) when is_list(value), do: {:ok, value}
@@ -116,13 +117,13 @@ defmodule Estructura.Tree do
     do: {:error, ":content must be a nil, a binary, or a list, ‹#{inspect(value)}› given"}
 
   @doc """
-  Coerces the deeply nested map to an instance of nested `Estructura.Tree`
+  Coerces the deeply nested map to an instance of nested `Estructura.Aston`
   """
   @spec coerce(any(), [String.t()]) :: {:ok, value} | {:error, reason}
         when value: any(), reason: String.t()
   def coerce(term, key_prefix \\ [])
 
-  def coerce(%Estructura.Tree{} = tree, key_prefix),
+  def coerce(%Aston{} = tree, key_prefix),
     do: tree |> Map.from_struct() |> coerce(key_prefix)
 
   def coerce(nil, _key_prefix),
@@ -159,9 +160,9 @@ defmodule Estructura.Tree do
             term: non_empty,
             message: "Unknown fields: #{inspect(keys)}"
       end
-      |> Enum.reduce(%Estructura.Tree{}, fn {k, v}, acc ->
+      |> Enum.reduce(%Aston{}, fn {k, v}, acc ->
         case if(k == :content, do: coerce(v, key_prefix ++ [:content]), else: {:ok, v}) do
-          {:ok, v} -> put_in(acc, [k], v)
+          {:ok, v} -> put!(acc, k, v)
           {:error, reason} -> raise KeyError, key: k, term: v, message: reason
         end
       end)
@@ -176,13 +177,27 @@ defmodule Estructura.Tree do
     do: {:error, "Unknown term at #{inspect(key_prefix)}: ‹#{inspect(term)}›"}
 
   @doc """
-  Converts `Estructura.Tree` to the XML AST understandable by `XmlBuilder`
+  Returns the key to be used for accessing the nested element(s)
+  """
+  def access(%Aston{name: root}, [root | path]), do: access(path)
+  def access(%Aston{}, path), do: access(path)
+
+  @doc false
+  def access(path) when is_list(path) do
+    Enum.flat_map(path, fn e -> [:content, Access.filter(&match?(%Aston{name: ^e}, &1))] end)
+  end
+
+  @doc false
+  def root(%Aston{name: name}), do: name
+
+  @doc """
+  Converts `Estructura.Aston` to the XML AST understandable by `XmlBuilder`
   """
   @spec to_ast(t()) :: {element, map(), content}
         when element: atom() | binary(), content: nil | binary() | list()
-  def to_ast(%Estructura.Tree{} = tree), do: ast_content(tree)
+  def to_ast(%Aston{} = tree), do: ast_content(tree)
 
-  defp ast_content(%Estructura.Tree{name: name, attributes: attributes, content: content}),
+  defp ast_content(%Aston{name: name, attributes: attributes, content: content}),
     do: {name, attributes, ast_content(content)}
 
   defp ast_content(nil), do: nil
@@ -195,7 +210,7 @@ defmodule Estructura.Tree do
       StreamData.frequency([
         {1, nil},
         {2, StreamData.string(:alphanumeric)},
-        {7, Estructura.Tree.__generator__()}
+        {7, Aston.__generator__()}
       ]),
       max_length: @max_children
     )

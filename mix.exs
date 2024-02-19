@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.2.7"
+  @version "1.2.8"
 
   def project do
     [
@@ -95,7 +95,7 @@ defmodule Estructura.MixProject do
       groups_for_modules: [
         # Estructura,
         # Estructura.Nested,
-        # Estructura.Tree,
+        # Estructura.Aston,
         Protocols: [
           Estructura.Flattenable,
           Estructura.Transformer

@@ -18,12 +18,13 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.2.8` — `Estructura.Tree` → `Estructura.Aston` + `Aston.access/2` to retrieve and access key by names
 * `1.2.5` — `use Estructura.Nested flattenable: boolean(), jason: boolean(), transformer: boolean()`
 * `1.2.3` — Several `coerce/1` and `validate/1` clauses, default coercers
 * `1.2.2` — `Estructura.Flattenable`
 * `1.2.1` — Generators for `:datetime` and `:date`
 * `1.2.0` — `Estructura.Nested` would attempt to split keys by a delimiter if instructed
-* `1.1.0` — `Estructura.Tree` to hold an AST structure, like XML
+* `1.1.0` — `Estructura.Aston` to hold an AST structure, like XML
 * `1.0.0` — Elixir v1.16 and deps
 * `0.6.0` — `Estructura.Transform` to produce squeezed representations of nested structs
 * `0.5.5` — export declarations of both `Estructura` and `Estructura.Nested` to docs

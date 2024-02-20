@@ -5,7 +5,7 @@ defmodule Estructura.StreamData do
 
   @typep seed() :: :rand.state()
   @typep size() :: non_neg_integer()
-  @typep generator_fun(a) :: (seed(), size() -> StreamData.LazyAston.t(a))
+  @typep generator_fun(a) :: (seed(), size() -> StreamData.LazyTree.t(a))
 
   @typedoc """
   An opaque type that represents an `Estructura.StreamData` generator that generates values

@@ -12,6 +12,8 @@ defmodule Estructura.Coercer do
   @callback coerce(value) :: {:ok, value} | {:error, any()} when value: term()
 end
 
+# credo:disable-for-this-file Credo.Check.Design.AliasUsage
+
 defmodule Estructura.Coercers.Integer do
   @moduledoc "Default coercer for `:integer`, coercing strings and floats by rounding"
 
@@ -31,6 +33,16 @@ defmodule Estructura.Coercers.Integer do
   def coerce(value) when is_float(value), do: {:ok, round(value)}
 end
 
+defmodule Estructura.Coercers.NullableInteger do
+  @moduledoc "Nullable coercer for `:integer`, coercing strings and floats by rounding, allows `nil` value"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(nil), do: {:ok, nil}
+  def coerce(value), do: Estructura.Coercers.Integer.coerce(value)
+end
+
 defmodule Estructura.Coercers.Float do
   @moduledoc "Default coercer for `:float`, coercing strings and integers by multiplying by `1.0`"
 
@@ -48,6 +60,16 @@ defmodule Estructura.Coercers.Float do
   end
 
   def coerce(value) when is_float(value), do: {:ok, value}
+end
+
+defmodule Estructura.Coercers.NullableFloat do
+  @moduledoc "Nullable coercer for `:float`, coercing strings and floats by rounding, allows `nil` value"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(nil), do: {:ok, nil}
+  def coerce(value), do: Estructura.Coercers.Float.coerce(value)
 end
 
 defmodule Estructura.Coercers.Date do
@@ -77,6 +99,16 @@ defmodule Estructura.Coercers.Date do
   end
 end
 
+defmodule Estructura.Coercers.NullableDate do
+  @moduledoc "Nullable coercer for `:date`, coercing strings and floats by rounding, allows `nil` value"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(nil), do: {:ok, nil}
+  def coerce(value), do: Estructura.Coercers.Date.coerce(value)
+end
+
 defmodule Estructura.Coercers.Time do
   @moduledoc "Default coercer for `:time`, coercing strings (_ISO8601_) and integers (_epoch_)"
 
@@ -101,6 +133,16 @@ defmodule Estructura.Coercers.Time do
   end
 end
 
+defmodule Estructura.Coercers.NullableTime do
+  @moduledoc "Nullable coercer for `:time`, coercing strings and floats by rounding, allows `nil` value"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(nil), do: {:ok, nil}
+  def coerce(value), do: Estructura.Coercers.Time.coerce(value)
+end
+
 defmodule Estructura.Coercers.Datetime do
   @moduledoc "Default coercer for `:datetime`, coercing strings (_ISO8601_) and integers (_epoch_)"
 
@@ -120,4 +162,14 @@ defmodule Estructura.Coercers.Datetime do
   def coerce(value) when is_integer(value) do
     DateTime.from_unix(value)
   end
+end
+
+defmodule Estructura.Coercers.NullableDatetime do
+  @moduledoc "Nullable coercer for `:datetime`, coercing strings and floats by rounding, allows `nil` value"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(nil), do: {:ok, nil}
+  def coerce(value), do: Estructura.Coercers.Datetime.coerce(value)
 end

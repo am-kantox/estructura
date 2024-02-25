@@ -272,8 +272,17 @@ defmodule Estructura do
   @doc """
   Instantiates the struct by using `Access` from a map, passing all coercions and validations.
   """
-  @spec coerce(module(), map(), keyword()) :: {:ok, struct()} | {:error, Exception.t()}
-  def coerce(module, %{} = map, options \\ []) when is_atom(module),
+  @spec coerce(module(), keyword() | map(), keyword()) ::
+          {:ok, struct()} | {:error, Exception.t()}
+  def coerce(module, data, options \\ [])
+
+  def coerce(module, data, options) when is_list(data) do
+    if Keyword.keyword?(data),
+      do: coerce(module, Map.new(data), options),
+      else: {:error, %ArgumentError{message: "Cannot coerce a list ‹#{inspect(data)}›"}}
+  end
+
+  def coerce(module, %{} = map, options) when is_atom(module),
     do: Estructura.Nested.from_term(module, map, options)
 
   @spec diff_result({map(), map()}, :overlap | :disjoint) :: map()

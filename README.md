@@ -18,6 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.2.12` — export type from `Estructura.Nested`
 * `1.2.11` — nullable coercers
 * `1.2.10` — coercers for floats, and date/time values
 * `1.2.8` — `Estructura.Tree` → `Estructura.Aston` + `Aston.access/2` to retrieve and access key by names

@@ -349,6 +349,38 @@ defmodule Estructura.Nested do
     end)
   end
 
+  @spec struct_type_ast(module(), shape()) :: {:%{}, keyword(), keyword()}
+  defp struct_type_ast(module, fields) do
+    content =
+      Enum.map(fields, fn
+        # [AM] make types for :list and :mixed
+        {name, {:list, _type}} ->
+          {name, {:list, [], []}}
+
+        {name, {:mixed, _types}} ->
+          {name, {:any, [], []}}
+
+        {name, {:simple, type}} when type in [:integer, :float] ->
+          {name, {type, [], []}}
+
+        {name, {:simple, type}} when type in [:date, :datetime, :time, :string] ->
+          type = with :datetime <- type, do: :date_time
+          type = Module.concat([type |> to_string() |> Macro.camelize()])
+          {name, {{:., [], [type, :t]}, [], []}}
+
+        {name, {:simple, _type}} ->
+          {name, {:any, [], []}}
+
+        {name, {:estructura, module}} ->
+          {name,
+           {{:., [],
+             [{:__aliases__, [alias: false], module |> Module.split() |> Enum.map(&:"#{&1}")}, :t]},
+            [], []}}
+      end)
+
+    {:%{}, [], [{:__struct__, module} | content]}
+  end
+
   @spec generator_ast(shape()) :: [{atom(), mfargs()}]
   defp generator_ast(fields) do
     Enum.map(fields, fn
@@ -398,6 +430,7 @@ defmodule Estructura.Nested do
   defp module_ast(module, nested?, fields, %{funs: funs, defs: defs}) do
     {coercions, validations} = coercions_and_validations(funs)
     struct = struct_ast(fields)
+    struct_type = struct_type_ast(module, fields)
     generator = generator_ast(fields)
 
     need_jason? =
@@ -438,6 +471,7 @@ defmodule Estructura.Nested do
         if unquote(need_transformer?), do: @derive(Estructura.Transformer)
         if unquote(need_flattenable?), do: @derive(Estructura.Flattenable)
 
+        @type t :: unquote(struct_type)
         defstruct unquote(Macro.escape(struct))
 
         @doc """

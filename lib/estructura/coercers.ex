@@ -31,6 +31,25 @@ defmodule Estructura.Coercers.Integer do
   def coerce(value) when is_float(value), do: {:ok, round(value)}
 end
 
+defmodule Estructura.Coercers.Float do
+  @moduledoc "Default coercer for `:float`, coercing strings and integers by multiplying by `1.0`"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(value) when is_integer(value), do: {:ok, 1.0 * value}
+
+  def coerce(value) when is_binary(value) do
+    case Float.parse(value) do
+      {float, ""} -> {:ok, float}
+      {_float, remainder} -> {:error, "Trailing garbage: ‹#{remainder}›"}
+      :error -> {:error, "Invalid value: ‹#{inspect(value)}›"}
+    end
+  end
+
+  def coerce(value) when is_float(value), do: {:ok, value}
+end
+
 defmodule Estructura.Coercers.Date do
   @moduledoc "Default coercer for `:date`, coercing strings (_ISO8601_) and integers (_epoch_)"
 
@@ -52,6 +71,30 @@ defmodule Estructura.Coercers.Date do
   def coerce(value) when is_binary(value) do
     case DateTime.from_iso8601(value) do
       {:ok, value, 0} -> {:ok, DateTime.to_date(value)}
+      {:ok, _value, offset} -> {:error, "Unsupported offset: ‹#{offset}›"}
+      error -> error
+    end
+  end
+end
+
+defmodule Estructura.Coercers.Time do
+  @moduledoc "Default coercer for `:time`, coercing strings (_ISO8601_) and integers (_epoch_)"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(%Time{} = value), do: {:ok, value}
+  def coerce(%DateTime{} = value), do: {:ok, DateTime.to_time(value)}
+
+  def coerce(<<_::binary-size(2), ?:, _::binary-size(2), ?:, _::binary-size(2)>> = value),
+    do: Time.from_iso8601(value)
+
+  def coerce(<<y::binary-size(2), m::binary-size(2), d::binary-size(2)>>),
+    do: coerce(y <> <<?:>> <> m <> <<?:>> <> d)
+
+  def coerce(value) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, value, 0} -> {:ok, DateTime.to_time(value)}
       {:ok, _value, offset} -> {:error, "Unsupported offset: ‹#{offset}›"}
       error -> error
     end

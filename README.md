@@ -18,6 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.2.10` — more coercers
 * `1.2.8` — `Estructura.Tree` → `Estructura.Aston` + `Aston.access/2` to retrieve and access key by names
 * `1.2.5` — `use Estructura.Nested flattenable: boolean(), jason: boolean(), transformer: boolean()`
 * `1.2.3` — Several `coerce/1` and `validate/1` clauses, default coercers

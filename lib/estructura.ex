@@ -304,8 +304,9 @@ defmodule Estructura do
       fn {field, formula}, acc ->
         value =
           case formula do
-            %Formulae{} = f ->
-              Formulae.eval(f, acc |> Map.from_struct() |> Map.to_list())
+            %{__struct__: Formulae} = f ->
+              # credo:disable-for-next-line
+              apply(Formulae, :eval, [f, acc |> Map.from_struct() |> Map.to_list()])
 
             f when is_function(f, 1) ->
               f.(acc)

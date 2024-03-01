@@ -18,11 +18,18 @@ defmodule Estructura.Hooks do
                                         :calculated,
                                         unquote(calculated)
                                         |> Enum.map(fn
-                                          {k, %Formulae{} = formula} ->
+                                          {k, %{__struct__: Formulae} = formula} ->
                                             {k, formula}
 
                                           {k, formula} when is_binary(formula) ->
-                                            {k, Formulae.compile(formula, imports: :none)}
+                                            {
+                                              k,
+                                              # credo:disable-for-next-line
+                                              apply(Formulae, :compile, [
+                                                formula,
+                                                [imports: :none]
+                                              ])
+                                            }
 
                                           {k, formula} when is_function(formula, 1) ->
                                             {k, formula}

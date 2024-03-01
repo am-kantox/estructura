@@ -22,6 +22,7 @@ defmodule Estructura do
       to be overwritten by implementations, default `false`
     * `validation: boolean() | [key()]` whether to generate the bunch of `validate_×××/1` functions
       to be overwritten by implementations, default `false`
+    * `calculated: [{key(), formula}] when formula: binary() | Formulae.t() | (t() -> any())` the calculated fields 
     * `enumerable: boolean()` whether to generate the `Enumerable` porotocol implementation, default `false`
     * `collectable: false | key()` whether to generate the `Collectable` protocol implementation,
       default `false`; if non-falsey atom is given, it must point to a struct field where `Collectable`
@@ -41,6 +42,7 @@ defmodule Estructura do
       access: true,
       coercion: [:foo], # requires `c:MyStruct.Coercible.coerce_foo/1` impl
       validation: true, # requires `c:MyStruct.Validatable.validate_×××/1` impls
+      calculated: [foo: "length(bar)"],
       enumerable: true,
       collectable: :bar,
       generator: [
@@ -50,7 +52,7 @@ defmodule Estructura do
           [[key1: {StreamData, :integer}, key2: {StreamData, :integer}]]}
       ]
 
-    defstruct foo: 42, bar: [], baz: %{}
+    defstruct foo: 0, bar: [], baz: %{}
 
     @impl MyStruct.Coercible
     def coerce_foo(value) when is_integer(value), do: {:ok, value}
@@ -81,14 +83,14 @@ defmodule Estructura do
   ```elixir
   s = %MyStruct{}
 
-  put_in s, [:foo], :forty_two
-  #⇒ %MyStruct{foo: :forty_two, bar: [], baz: %{}}
+  put_in s, [:foo], "42"
+  #⇒ %MyStruct{foo: 42, bar: [], baz: %{}}
 
   for i <- [1, 2, 3], into: s, do: i
-  #⇒ %MyStruct{foo: 42, bar: [1, 2, 3], baz: %{}}
+  #⇒ %MyStruct{foo: 0, bar: [1, 2, 3], baz: %{}}
 
   Enum.map(s, &elem(&1, 1))
-  #⇒ [42, [], %{}]
+  #⇒ [0, [], %{}]
 
   MyStruct.__generator__() |> Enum.take(3)
   #⇒ [
@@ -97,6 +99,11 @@ defmodule Estructura do
   #      %MyStruct{bar: ["", "", ""], baz: %{key1: -3, key2: 1}, foo: -1}
   #    ]
   ```
+
+  ### Calculated fields
+
+  When using `Access`, the calculated fields would be also updated upon the
+    update the fields then depend on.
 
   ### Coercion
 
@@ -284,6 +291,30 @@ defmodule Estructura do
 
   def coerce(module, %{} = map, options) when is_atom(module),
     do: Estructura.Nested.from_term(module, map, options)
+
+  @doc false
+  def recalculate_calculated(data, calculated) when is_list(data) do
+    data |> Map.new() |> recalculate_calculated(calculated) |> Map.to_list()
+  end
+
+  def recalculate_calculated(%{} = data, calculated) do
+    Enum.reduce(
+      calculated,
+      data,
+      fn {field, formula}, acc ->
+        value =
+          case formula do
+            %Formulae{} = f ->
+              Formulae.eval(f, acc |> Map.from_struct() |> Map.to_list())
+
+            f when is_function(f, 1) ->
+              f.(acc)
+          end
+
+        Map.put(acc, field, value)
+      end
+    )
+  end
 
   @spec diff_result({map(), map()}, :overlap | :disjoint) :: map()
   defp diff_result({same, diff}, :overlap),

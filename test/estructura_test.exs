@@ -12,13 +12,14 @@ defmodule EstructuraTest do
   alias Estructura.Collectable.MapSet, as: ECMS
 
   alias Estructura.{Diff, Full, LazyInst, Void}
-  alias Estructura.{Lazy, LazyMap}
+  alias Estructura.{Calculated, Lazy, LazyMap}
 
   require Integer
 
   @full %Full{}
   @lazy %LazyInst{}
   @void %Void{}
+  @calculated %Calculated{}
 
   @lazy_map LazyMap.new(
               [
@@ -147,6 +148,10 @@ defmodule EstructuraTest do
     end
 
     refute Void.__info__(:functions)[:__generate__]
+  end
+
+  test "calculated" do
+    assert %Estructura.Calculated{foo: 3, bar: [1, 2, 3]} = put_in(@calculated, [:bar], [1, 2, 3])
   end
 
   test "lazy" do

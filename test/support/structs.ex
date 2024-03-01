@@ -2,7 +2,14 @@ defmodule Estructura.Void do
   @moduledoc false
   use Estructura, access: false, enumerable: false, collectable: false
 
-  defstruct foo: 42, bar: "", baz: %{inner_baz: 42}, zzz: nil
+  defstruct foo: 0, bar: [], baz: %{inner_baz: 42}, zzz: nil
+end
+
+defmodule Estructura.Calculated do
+  @moduledoc false
+  use Estructura, access: true, enumerable: false, collectable: false, calculated: [foo: "length(bar)"]
+
+  defstruct foo: 0, bar: [], baz: %{inner_baz: 42}, zzz: nil
 end
 
 defmodule Estructura.LazyInst do
@@ -85,13 +92,27 @@ defmodule Estructura.User do
   Nested example. The source code of the file follows.
 
   ```elixir
-  use Estructura.Nested
+  
+  defmodule Calculated do
+    @moduledoc false
+    def person(this) do
+      this.name <> ", " <> this.address.city
+    end
+  end
+
+  use Estructura.Nested, calculated: [person: &Calculated.person/1]
 
   shape %{
     created_at: :datetime,
     name: :string,
     address: %{city: :string, street: %{name: [:string], house: :string}},
+    person: :string,
     data: %{age: :float}
+  }
+
+  init %{
+    name: "Aleksei",
+    address: %{city: "Barcelona"}
   }
 
   coerce do
@@ -130,20 +151,34 @@ defmodule Estructura.User do
          street: %Estructura.User.Address.Street{house: "221 Bis", name: "Baker"}
        },
        data: %Estructura.User.Data{age: 32.0},
-       name: "Watson"}}
+       name: "Watson",
+       person: "Watson, London"}}
   ```
 
   """
 
-  use Estructura.Nested, jason: true
+  defmodule Calculated do
+    @moduledoc false
+    def person(this) do
+      this.name <> ", " <> this.address.city
+    end
+  end
 
-  shape(%{
+  use Estructura.Nested, calculated: [person: &Calculated.person/1]
+
+  shape %{
     created_at: :datetime,
     birthday: :date,
     name: :string,
+    person: :string,
     address: %{city: :string, street: %{name: [:string], house: :string}},
     data: %{age: :float}
-  })
+  }
+
+  init %{
+    name: "Aleksei",
+    address: %{city: "Barcelona"}
+  }
 
   coerce do
     def data.age(age) when is_float(age), do: {:ok, age}

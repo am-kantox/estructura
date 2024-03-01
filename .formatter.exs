@@ -1,4 +1,4 @@
-locals_without_parens = [shape: 1]
+locals_without_parens = [shape: 1, init: 1]
 
 [
   import_deps: [:stream_data],

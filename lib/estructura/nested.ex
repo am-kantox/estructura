@@ -76,6 +76,18 @@ defmodule Estructura.Nested do
     end
   end
 
+  defmacro init(values) do
+    quote generated: true, location: :keep, bind_quoted: [values: values] do
+      nested = Module.get_attribute(__MODULE__, :__estructura_nested__)
+
+      Module.put_attribute(
+        __MODULE__,
+        :__estructura_nested__,
+        Map.put(nested, :values, Map.new(values))
+      )
+    end
+  end
+
   Enum.each(@actions -- [:generate], fn name ->
     doc =
       """
@@ -137,6 +149,8 @@ defmodule Estructura.Nested do
     {shape, nested} =
       env.module |> Module.get_attribute(:__estructura_nested__) |> Map.pop!(:shape)
 
+    {values, nested} = Map.pop(nested, :values)
+
     impls =
       for {action, defs} when action in unquote(@actions) <- nested,
           {{module, fun}, def} <- defs,
@@ -148,7 +162,7 @@ defmodule Estructura.Nested do
           |> update_in([module, :funs], &(&1 ++ [fun]))
       end
 
-    slice(env.module, nil, shape, impls)
+    slice(env.module, nil, shape, values, impls)
   end
 
   @doc false
@@ -301,16 +315,16 @@ defmodule Estructura.Nested do
      ]}
   end
 
-  @spec slice(module(), atom(), map(), %{required(module()) => definitions()}) ::
+  @spec slice(module(), atom(), map(), map(), %{required(module()) => definitions()}) ::
           Macro.output() | {atom(), {:estructura, module()}}
-  defp slice(module, name, %{} = fields, impls) do
+  defp slice(module, name, %{} = fields, values, impls) do
     impl = Map.get(impls, module, %{funs: [], defs: []})
 
     complex =
       for {name, %{} = subslice} <- fields, into: %{} do
         module
         |> Module.concat(name |> to_string() |> Macro.camelize())
-        |> slice(name, subslice, impls)
+        |> slice(name, subslice, Map.get(values, name, %{}), impls)
       end
 
     all =
@@ -324,9 +338,9 @@ defmodule Estructura.Nested do
       |> Map.merge(complex)
 
     if is_nil(name) do
-      module_ast(module, false, all, impl)
+      module_ast(module, false, all, values, impl)
     else
-      Module.create(module, module_ast(module, true, all, impl), __ENV__)
+      Module.create(module, module_ast(module, true, all, values, impl), __ENV__)
       {name, {:estructura, module}}
     end
   end
@@ -339,14 +353,16 @@ defmodule Estructura.Nested do
     }
   end
 
-  @spec struct_ast(shape()) :: [{atom(), nil | struct()}]
-  defp struct_ast(fields) do
-    Enum.map(fields, fn
-      {name, {:list, _type}} -> {name, []}
-      {name, {:mixed, _types}} -> {name, []}
-      {name, {:simple, _type}} -> {name, nil}
-      {name, {:estructura, module}} -> {name, struct!(module, [])}
+  @spec struct_ast(shape(), map(), keyword() | map()) :: [{atom(), nil | list() | struct()}]
+  defp struct_ast(fields, values, calculated) do
+    fields
+    |> Enum.map(fn
+      {name, {:list, _type}} -> {name, Map.get(values, name, [])}
+      {name, {:mixed, _types}} -> {name, Map.get(values, name, [])}
+      {name, {:simple, _type}} -> {name, Map.get(values, name, nil)}
+      {name, {:estructura, module}} -> {name, struct!(module, Map.get(values, name, %{}))}
     end)
+    |> Estructura.recalculate_calculated(calculated)
   end
 
   @spec struct_type_ast(module(), shape()) :: {:%{}, keyword(), keyword()}
@@ -426,10 +442,16 @@ defmodule Estructura.Nested do
   defp stream_data_type_for(const),
     do: {StreamData, :constant, [const]}
 
-  @spec module_ast(module(), boolean(), shape(), definitions()) :: Macro.output()
-  defp module_ast(module, nested?, fields, %{funs: funs, defs: defs}) do
+  @spec module_ast(module(), boolean(), shape(), map(), definitions()) :: Macro.output()
+  defp module_ast(module, nested?, fields, values, %{funs: funs, defs: defs}) do
     {coercions, validations} = coercions_and_validations(funs)
-    struct = struct_ast(fields)
+
+    calculated =
+      if Module.open?(module),
+        do: Module.get_attribute(module, :__estructura_nested__, %{}) |> Map.get(:calculated, []),
+        else: []
+
+    struct = struct_ast(fields, values, calculated)
     struct_type = struct_type_ast(module, fields)
     generator = generator_ast(fields)
 
@@ -449,7 +471,7 @@ defmodule Estructura.Nested do
            module |> Module.get_attribute(:__estructura_nested__) |> Map.get(:flattenable, true))
 
     [
-      quote do
+      quote generated: true, location: :keep do
         if unquote(nested?), do: @moduledoc(false)
 
         if unquote(need_jason?) and {:module, Jason} == Code.ensure_compiled(Jason) do
@@ -498,6 +520,7 @@ defmodule Estructura.Nested do
           module,
           struct!(Estructura.Config,
             access: true,
+            calculated: calculated,
             coercion: coercions,
             validation: validations,
             generator: generator

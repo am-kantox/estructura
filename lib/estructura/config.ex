@@ -21,6 +21,7 @@ defmodule Estructura.Config do
           access: boolean(),
           coercion: false | true | [key()],
           validation: false | true | [key()],
+          calculated: [{key(), binary()}],
           colleactable: false | key(),
           enumerable: boolean(),
           generator: [{key(), generator()}]
@@ -29,6 +30,7 @@ defmodule Estructura.Config do
   defstruct access: true,
             coercion: false,
             validation: false,
+            calculated: [],
             collectable: false,
             enumerable: false,
             generator: false

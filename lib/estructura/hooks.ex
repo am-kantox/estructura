@@ -3,22 +3,37 @@ defmodule Estructura.Hooks do
 
   alias Estructura.Config, as: Cfg
 
-  @spec access_ast(boolean(), [Cfg.key()]) :: Macro.t()
-  defp access_ast(false, _fields), do: []
+  @spec access_ast(boolean(), [{Cfg.key(), binary()}], [Cfg.key()]) :: Macro.t()
+  defp access_ast(false, _calculated, _fields), do: []
 
-  defp access_ast(lazy?, fields) when lazy? in [true, :lazy] and is_list(fields) do
+  defp access_ast(lazy?, calculated, fields) when lazy? in [true, :lazy] and is_list(fields) do
     opening =
       quote generated: true, location: :keep do
         alias Estructura.Lazy
 
         @behaviour Access
 
+        @estructura_calculated_fields Module.get_attribute(
+                                        __MODULE__,
+                                        :calculated,
+                                        unquote(calculated)
+                                        |> Enum.map(fn
+                                          {k, %Formulae{} = formula} ->
+                                            {k, formula}
+
+                                          {k, formula} when is_binary(formula) ->
+                                            {k, Formulae.compile(formula, imports: :none)}
+
+                                          {k, formula} when is_function(formula, 1) ->
+                                            {k, formula}
+                                        end)
+                                      )
+
         @doc """
         Puts the value for the given key into the structure, passing coercion _and_ validation,
           returns `{:ok, updated_struct}` or `{:error, reason}` if there is no such key
         """
-        @spec put(%__MODULE__{}, Cfg.key(), any()) ::
-                {:ok, %__MODULE__{}} | {:error, any}
+        @spec put(%__MODULE__{}, Cfg.key(), any()) :: {:ok, %__MODULE__{}} | {:error, any}
         def put(data, key, value)
 
         @doc """
@@ -35,13 +50,21 @@ defmodule Estructura.Hooks do
         def get(data, key, default \\ nil)
       end
 
+    recalculate_clause =
+      quote generated: true, location: :keep do
+        def recalculate_calculated(%__MODULE__{} = data) do
+          Estructura.recalculate_calculated(data, @estructura_calculated_fields)
+        end
+      end
+
     clauses =
       for key <- fields do
         quote generated: true, location: :keep do
           def put(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
             with {:ok, value} <- coerce_value(unquote(key), value),
-                 {:ok, value} <- validate_value(unquote(key), value),
-                 do: {:ok, %__MODULE__{data | unquote(key) => value}}
+                 {:ok, value} <- validate_value(unquote(key), value) do
+              {:ok, recalculate_calculated(%__MODULE__{data | unquote(key) => value})}
+            end
           end
 
           def put!(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
@@ -158,7 +181,7 @@ defmodule Estructura.Hooks do
           do: raise(KeyError, key: key, term: __MODULE__)
       end
 
-    [opening | clauses] ++ [closing]
+    [opening, recalculate_clause | clauses] ++ [closing]
   end
 
   @spec coercion_ast(boolean() | [Cfg.key()], module(), [Cfg.key()]) :: Macro.t()
@@ -531,6 +554,7 @@ defmodule Estructura.Hooks do
         |> StreamData.map(&Tuple.to_list/1)
         |> StreamData.map(&Enum.zip(unquote(fields), &1))
         |> StreamData.map(&struct(this, &1))
+        |> StreamData.map(&recalculate_calculated/1)
       end
 
       defoverridable __generator__: 1
@@ -555,18 +579,35 @@ defmodule Estructura.Hooks do
   @doc false
   def estructura_ast(module, config, fields) do
     fields =
-      if config.access == :lazy do
-        if :__lazy_data__ in fields do
-          fields -- [:__lazy_data__]
-        else
-          raise CompileError,
-            description: "`:__lazy_data__` struct key must be defined for `access: :lazy` config"
-        end
-      else
-        fields
+      case config.access do
+        :lazy ->
+          if :__lazy_data__ in fields do
+            fields -- [:__lazy_data__]
+          else
+            raise CompileError,
+              description:
+                "`:__lazy_data__` struct key must be defined for `access: :lazy` config"
+          end
+
+        false ->
+          cond do
+            {config.coercion, config.validation} != {false, false} ->
+              raise CompileError,
+                description: "`access: true` is required to use coercion and/or validation"
+
+            config.calculated != [] ->
+              raise CompileError,
+                description: "`access: true` is required to use calculated fields"
+
+            true ->
+              fields
+          end
+
+        true ->
+          fields
       end
 
-    access_ast = access_ast(config.access, fields)
+    access_ast = access_ast(config.access, config.calculated, fields)
     coercion_ast = coercion_ast(config.access && config.coercion, module, fields)
     validation_ast = validation_ast(config.access && config.validation, module, fields)
 

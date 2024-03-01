@@ -319,6 +319,7 @@ defmodule Estructura.Nested do
           Macro.output() | {atom(), {:estructura, module()}}
   defp slice(module, name, %{} = fields, values, impls) do
     impl = Map.get(impls, module, %{funs: [], defs: []})
+    values = values || %{}
 
     complex =
       for {name, %{} = subslice} <- fields, into: %{} do

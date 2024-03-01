@@ -355,6 +355,8 @@ defmodule Estructura.Nested do
 
   @spec struct_ast(shape(), map(), keyword() | map()) :: [{atom(), nil | list() | struct()}]
   defp struct_ast(fields, values, calculated) do
+    values = values || %{}
+
     fields
     |> Enum.map(fn
       {name, {:list, _type}} -> {name, Map.get(values, name, [])}

@@ -13,8 +13,8 @@ defmodule Estructura.Aston.Test do
                   name: "Baz.Baz2",
                   attributes: %{},
                   content: [
-                    %Aston{name: "Deep1", attributes: %{}, content: []},
-                    %Aston{name: "Deep2", attributes: %{}, content: []}
+                    %Aston{name: "Deep1", attributes: %{}, content: [true, 3.14]},
+                    %Aston{name: "Deep2", attributes: %{}, content: ["string", nil]}
                   ]
                 }
               ]
@@ -22,7 +22,13 @@ defmodule Estructura.Aston.Test do
              Aston.coerce(%{
                name: "Bar",
                attributes: {:foo, :bar},
-               content: %{name: ["Baz", "Baz2"], content: [%{name: "Deep1"}, %{name: "Deep2"}]}
+               content: %{
+                 name: ["Baz", "Baz2"],
+                 content: [
+                   %{content: [true, 3.14], name: "Deep1"},
+                   %{content: ["string", nil], name: "Deep2"}
+                 ]
+               }
              })
   end
 

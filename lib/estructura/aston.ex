@@ -76,6 +76,7 @@ defmodule Estructura.Aston do
   def coerce_content(nil), do: {:ok, nil}
   def coerce_content(true), do: {:ok, true}
   def coerce_content(false), do: {:ok, false}
+  def coerce_content(number) when is_number(number), do: {:ok, number}
   def coerce_content(text) when is_binary(text), do: {:ok, text}
   def coerce_content(value), do: value |> List.wrap() |> do_coerce_content({[], []})
 
@@ -85,6 +86,9 @@ defmodule Estructura.Aston do
     do: {:error, "The following elements could not be coerced: #{inspect(bad)}"}
 
   defp do_coerce_content([head | rest], {good, bad}) when head in [true, false, nil],
+    do: do_coerce_content(rest, {[head | good], bad})
+
+  defp do_coerce_content([head | rest], {good, bad}) when is_number(head),
     do: do_coerce_content(rest, {[head | good], bad})
 
   defp do_coerce_content([head | rest], {good, bad}) when is_binary(head),
@@ -117,6 +121,7 @@ defmodule Estructura.Aston do
   def validate_content(nil), do: {:ok, nil}
   def validate_content(true), do: {:ok, true}
   def validate_content(false), do: {:ok, false}
+  def validate_content(number) when is_number(number), do: {:ok, number}
   def validate_content(text) when is_binary(text), do: {:ok, text}
   def validate_content(value) when is_list(value), do: {:ok, value}
 
@@ -138,6 +143,9 @@ defmodule Estructura.Aston do
 
   def coerce(bool_node, _key_prefix) when bool_node in [true, false],
     do: {:ok, bool_node}
+
+  def coerce(number_node, _key_prefix) when is_number(number_node),
+    do: {:ok, number_node}
 
   def coerce(text_node, _key_prefix) when is_binary(text_node),
     do: {:ok, text_node}
@@ -213,6 +221,7 @@ defmodule Estructura.Aston do
   defp ast_content(nil), do: ""
   defp ast_content(true), do: "true"
   defp ast_content(false), do: "false"
+  defp ast_content(number) when is_number(number), do: "#{number}"
   defp ast_content(text_node) when is_binary(text_node), do: text_node
   defp ast_content(list) when is_list(list), do: Enum.map(list, &ast_content/1)
 

@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.3.2"
+  @version "1.3.3"
 
   def project do
     [

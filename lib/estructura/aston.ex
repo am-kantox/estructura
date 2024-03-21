@@ -219,9 +219,9 @@ defmodule Estructura.Aston do
     do: {name, attributes, ast_content(content)}
 
   defp ast_content(nil), do: ""
-  defp ast_content(true), do: "true"
-  defp ast_content(false), do: "false"
-  defp ast_content(number) when is_number(number), do: "#{number}"
+  defp ast_content(true), do: true
+  defp ast_content(false), do: false
+  defp ast_content(number) when is_number(number), do: number
   defp ast_content(text_node) when is_binary(text_node), do: text_node
   defp ast_content(list) when is_list(list), do: Enum.map(list, &ast_content/1)
 

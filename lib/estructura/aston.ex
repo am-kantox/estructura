@@ -131,27 +131,27 @@ defmodule Estructura.Aston do
   @doc """
   Coerces the deeply nested map to an instance of nested `Estructura.Aston`
   """
-  @spec coerce(any(), [String.t()]) :: {:ok, value} | {:error, reason}
+  @spec coerce(any(), keyword()) :: {:ok, value} | {:error, reason}
         when value: any(), reason: String.t()
-  def coerce(term, key_prefix \\ [])
+  def coerce(term, opts \\ [])
 
-  def coerce(%Aston{} = tree, key_prefix),
-    do: tree |> Map.from_struct() |> coerce(key_prefix)
+  def coerce(%Aston{} = tree, opts),
+    do: tree |> Map.from_struct() |> coerce(opts)
 
-  def coerce(nil, _key_prefix),
-    do: {:ok, nil}
+  def coerce(nil, opts),
+    do: apply_coercers(nil, opts)
 
-  def coerce(bool_node, _key_prefix) when bool_node in [true, false],
-    do: {:ok, bool_node}
+  def coerce(bool_node, opts) when bool_node in [true, false],
+    do: apply_coercers(bool_node, opts)
 
-  def coerce(number_node, _key_prefix) when is_number(number_node),
-    do: {:ok, number_node}
+  def coerce(number_node, opts) when is_number(number_node),
+    do: apply_coercers(number_node, opts)
 
-  def coerce(text_node, _key_prefix) when is_binary(text_node),
-    do: {:ok, text_node}
+  def coerce(text_node, opts) when is_binary(text_node),
+    do: apply_coercers(text_node, opts)
 
-  def coerce(list, key_prefix) when is_list(list) do
-    result = Enum.map(list, &coerce(&1, key_prefix))
+  def coerce(list, opts) when is_list(list) do
+    result = Enum.map(list, &coerce(&1, opts))
 
     case Enum.split_with(result, &match?({:error, _}, &1)) do
       {[], result} -> {:ok, Enum.map(result, &elem(&1, 1))}
@@ -159,7 +159,11 @@ defmodule Estructura.Aston do
     end
   end
 
-  def coerce(%{} = map, key_prefix) do
+  def coerce(%{} = map, opts) do
+    name = Map.get_lazy(map, :name, fn -> Map.get(map, "name") end)
+    {key_prefix, opts} = Keyword.pop(opts, :key_prefix, [])
+    key_prefix = key_prefix ++ List.wrap(name)
+
     result =
       map
       |> Map.split(~w|name attributes content| ++ ~w|name attributes content|a)
@@ -179,7 +183,12 @@ defmodule Estructura.Aston do
             message: "Unknown fields: #{inspect(keys)}"
       end
       |> Enum.reduce(%Aston{}, fn {k, v}, acc ->
-        case if(k == :content, do: coerce(v, key_prefix ++ [:content]), else: {:ok, v}) do
+        k
+        |> case do
+          :content -> coerce(v, Keyword.put(opts, :key_prefix, key_prefix))
+          _ -> {:ok, v}
+        end
+        |> case do
           {:ok, v} -> put!(acc, k, v)
           {:error, reason} -> raise KeyError, key: k, term: v, message: reason
         end
@@ -191,8 +200,23 @@ defmodule Estructura.Aston do
       {:error, Exception.message(e)}
   end
 
-  def coerce(term, key_prefix),
-    do: {:error, "Unknown term at #{inspect(key_prefix)}: ‹#{inspect(term)}›"}
+  def coerce(term, opts),
+    do: {:error, "Unknown term at #{inspect(opts)}: ‹#{inspect(term)}›"}
+
+  @spec apply_coercers(any(), keyword()) :: {:ok, value} | {:error, reason}
+        when value: any(), reason: String.t()
+  defp apply_coercers(term, opts) do
+    key = Keyword.get(opts, :key_prefix)
+
+    opts
+    |> Keyword.get(:coercers, [])
+    |> Enum.to_list()
+    |> Enum.reduce_while({:ok, term}, fn
+      {^key, f}, {:ok, term} when is_function(f, 1) -> {:cont, f.(term)}
+      _, {:ok, _} = acc -> {:cont, acc}
+      _, {:error, _} = error -> {:halt, error}
+    end)
+  end
 
   @doc """
   Returns the key to be used for accessing the nested element(s)

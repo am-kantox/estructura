@@ -14,22 +14,32 @@ defmodule Estructura.Aston.Test do
                   attributes: %{},
                   content: [
                     %Aston{name: "Deep1", attributes: %{}, content: [true, 3.14]},
-                    %Aston{name: "Deep2", attributes: %{}, content: ["string", nil]}
+                    %Aston{name: "Deep2", attributes: %{}, content: ["string", nil]},
+                    %Aston{name: "Deep3", attributes: %{}, content: ["2024/03/27"]}
                   ]
                 }
               ]
             }} =
-             Aston.coerce(%{
-               name: "Bar",
-               attributes: {:foo, :bar},
-               content: %{
-                 name: ["Baz", "Baz2"],
-                 content: [
-                   %{content: [true, 3.14], name: "Deep1"},
-                   %{content: ["string", nil], name: "Deep2"}
-                 ]
+             Aston.coerce(
+               %{
+                 name: "Bar",
+                 attributes: {:foo, :bar},
+                 content: %{
+                   name: ["Baz", "Baz2"],
+                   content: [
+                     %{content: [true, 3.14], name: "Deep1"},
+                     %{content: ["string", nil], name: "Deep2"},
+                     %Aston{name: "Deep3", attributes: %{}, content: ["20240327"]}
+                   ]
+                 }
+               },
+               coercers: %{
+                 ["Bar", "Baz", "Baz2", "Deep3"] => fn
+                   <<y::32, m::16, d::16>> -> {:ok, <<y::32, ?/, m::16, ?/, d::16>>}
+                   other -> {:error, inspect(other)}
+                 end
                }
-             })
+             )
   end
 
   test "Aston.access/2" do
@@ -71,14 +81,14 @@ defmodule Estructura.Aston.Test do
   test "doesn’t coerce invalid data" do
     assert {:error, "Unknown fields: [\"nameQQ\"]"} = Aston.coerce(%{nameQQ: "Bar"})
 
-    assert {:error, "Unknown fields: [\"content.nameQQ\"]"} =
+    assert {:error, "Unknown fields: [\"Bar.nameQQ\"]"} =
              Aston.coerce(%{name: "Bar", content: %{nameQQ: ""}})
 
     assert {:error, "Cannot coerce value given for `name` field (%{foo: :bar})"} =
              Aston.coerce(%{name: %{foo: :bar}})
 
     assert {:error,
-            "Unknown fields: [\"content.content.nameA\"]\nUnknown fields: [\"content.content.nameB\"]"} =
+            "Unknown fields: [\"Bar.Baz.Baz2.nameA\"]\nUnknown fields: [\"Bar.Baz.Baz2.nameB\"]"} =
              Aston.coerce(%{
                name: "Bar",
                attributes: {:foo, :bar},

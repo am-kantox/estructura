@@ -18,6 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.4.1` — allow functions of arity 1 in `content` as coercers in a call to `Estructura.Aston.coerce/2`
 * `1.4.0` — allow coercers in a call to `Estructura.Aston.coerce/2`
 * `1.3.0` — calculated fields for `Estructura` and `Estructura.Nested`
 * `1.2.12` — export type from `Estructura.Nested`

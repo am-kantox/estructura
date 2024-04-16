@@ -131,27 +131,33 @@ defmodule Estructura.Aston do
   @doc """
   Coerces the deeply nested map to an instance of nested `Estructura.Aston`
   """
-  @spec coerce(any(), keyword()) :: {:ok, value} | {:error, reason}
+  @spec coerce(any(), keyword(), nil | any()) :: {:ok, value} | {:error, reason}
         when value: any(), reason: String.t()
-  def coerce(term, opts \\ [])
+  def coerce(term, opts \\ [], root \\ nil)
 
-  def coerce(%Aston{} = tree, opts),
-    do: tree |> Map.from_struct() |> coerce(opts)
+  def coerce(tree, opts, nil),
+    do: coerce(tree, opts, tree)
 
-  def coerce(nil, opts),
-    do: apply_coercers(nil, opts)
+  def coerce(%Aston{} = tree, opts, root),
+    do: tree |> Map.from_struct() |> coerce(opts, root)
 
-  def coerce(bool_node, opts) when bool_node in [true, false],
-    do: apply_coercers(bool_node, opts)
+  def coerce(f, opts, root) when is_function(f, 1),
+    do: apply_coercers(f.(root), opts, root)
 
-  def coerce(number_node, opts) when is_number(number_node),
-    do: apply_coercers(number_node, opts)
+  def coerce(nil, opts, root),
+    do: apply_coercers(nil, opts, root)
 
-  def coerce(text_node, opts) when is_binary(text_node),
-    do: apply_coercers(text_node, opts)
+  def coerce(bool_node, opts, root) when bool_node in [true, false],
+    do: apply_coercers(bool_node, opts, root)
 
-  def coerce(list, opts) when is_list(list) do
-    result = Enum.map(list, &coerce(&1, opts))
+  def coerce(number_node, opts, root) when is_number(number_node),
+    do: apply_coercers(number_node, opts, root)
+
+  def coerce(text_node, opts, root) when is_binary(text_node),
+    do: apply_coercers(text_node, opts, root)
+
+  def coerce(list, opts, root) when is_list(list) do
+    result = Enum.map(list, &coerce(&1, opts, root))
 
     case Enum.split_with(result, &match?({:error, _}, &1)) do
       {[], result} -> {:ok, Enum.map(result, &elem(&1, 1))}
@@ -159,7 +165,7 @@ defmodule Estructura.Aston do
     end
   end
 
-  def coerce(%{} = map, opts) do
+  def coerce(%{} = map, opts, root) do
     name = Map.get_lazy(map, :name, fn -> Map.get(map, "name") end)
     {key_prefix, opts} = Keyword.pop(opts, :key_prefix, [])
     key_prefix = key_prefix ++ List.wrap(name)
@@ -185,7 +191,7 @@ defmodule Estructura.Aston do
       |> Enum.reduce(%Aston{}, fn {k, v}, acc ->
         k
         |> case do
-          :content -> coerce(v, Keyword.put(opts, :key_prefix, key_prefix))
+          :content -> coerce(v, Keyword.put(opts, :key_prefix, key_prefix), root)
           _ -> {:ok, v}
         end
         |> case do
@@ -200,12 +206,12 @@ defmodule Estructura.Aston do
       {:error, Exception.message(e)}
   end
 
-  def coerce(term, opts),
+  def coerce(term, opts, _root),
     do: {:error, "Unknown term at #{inspect(opts)}: ‹#{inspect(term)}›"}
 
-  @spec apply_coercers(any(), keyword()) :: {:ok, value} | {:error, reason}
+  @spec apply_coercers(any(), keyword(), any()) :: {:ok, value} | {:error, reason}
         when value: any(), reason: String.t()
-  defp apply_coercers(term, opts) do
+  defp apply_coercers(term, opts, _root) do
     key = Keyword.get(opts, :key_prefix)
 
     opts

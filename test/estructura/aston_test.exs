@@ -27,7 +27,10 @@ defmodule Estructura.Aston.Test do
                  content: %{
                    name: ["Baz", "Baz2"],
                    content: [
-                     %{content: [true, 3.14], name: "Deep1"},
+                     %{
+                       content: [fn data -> data.name == "Bar" end, 3.14],
+                       name: "Deep1"
+                     },
                      %{content: ["string", nil], name: "Deep2"},
                      %Aston{name: "Deep3", attributes: %{}, content: ["20240327"]}
                    ]

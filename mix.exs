@@ -45,7 +45,7 @@ defmodule Estructura.MixProject do
 
   defp deps do
     [
-      {:stream_data, "~> 0.5"},
+      {:stream_data, "~> 1.0"},
       {:doctest_formatter, "~> 0.2", runtime: false},
       {:formulae, "~> 0.14", optional: true},
       {:jason, "~> 1.0", optional: true},

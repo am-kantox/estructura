@@ -42,7 +42,7 @@ defmodule Estructura do
       access: true,
       coercion: [:foo], # requires `c:MyStruct.Coercible.coerce_foo/1` impl
       validation: true, # requires `c:MyStruct.Validatable.validate_×××/1` impls
-      calculated: [foo: "length(bar)"],
+      calculated: [foo: "length(bar)"], # requires `:formulae` dependency
       enumerable: true,
       collectable: :bar,
       generator: [

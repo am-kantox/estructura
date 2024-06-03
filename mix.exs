@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.4.2"
+  @version "1.5.0"
 
   def project do
     [
@@ -47,11 +47,11 @@ defmodule Estructura.MixProject do
     [
       {:stream_data, "~> 1.0"},
       {:doctest_formatter, "~> 0.2", runtime: false},
-      {:formulae, "~> 0.14", optional: true},
       {:jason, "~> 1.0", optional: true},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},
       {:dialyxir, "~> 1.0", only: [:dev, :test, :ci], runtime: false},
+      {:mneme, "~> 0.6", only: [:dev, :test, :ci]},
       {:ex_doc, "~> 0.11", only: [:dev, :ci]}
     ]
   end

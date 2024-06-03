@@ -5,12 +5,12 @@ defmodule Estructura.Void do
   defstruct foo: 0, bar: [], baz: %{inner_baz: 42}, zzz: nil
 end
 
-defmodule Estructura.Calculated do
-  @moduledoc false
-  use Estructura, access: true, enumerable: false, collectable: false, calculated: [foo: "length(bar)"]
+# defmodule Estructura.Calculated do
+#   @moduledoc false
+#   use Estructura, access: true, enumerable: false, collectable: false, calculated: [foo: "length(bar)"]
 
-  defstruct foo: 0, bar: [], baz: %{inner_baz: 42}, zzz: nil
-end
+#   defstruct foo: 0, bar: [], baz: %{inner_baz: 42}, zzz: nil
+# end
 
 defmodule Estructura.LazyInst do
   @moduledoc false

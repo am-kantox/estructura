@@ -26,3 +26,5 @@ alias Estructura.Void, as: V
 alias Estructura.LazyInst, as: L
 
 alias Estructura.{Lazy, LazyMap}
+
+alias Estructura.User, as: User

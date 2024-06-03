@@ -1,7 +1,19 @@
 defmodule Estructura.Aston.Test do
   use ExUnit.Case, async: true
+  use Mneme
 
   alias Estructura.Aston
+
+  test "coercions" do
+    auto_assert {:ok, "foobar"} <- Aston.coerce_name("foobar")
+    auto_assert {:ok, "foo.bar.baz"} <- Aston.coerce_name(~w|foo bar baz|)
+    auto_assert {:ok, ""} <- Aston.coerce_name(nil)
+    auto_assert {:ok, %{foo: :bar}} <- Aston.coerce_attributes(%{foo: :bar})
+    auto_assert {:ok, %{foo: :bar}} <- Aston.coerce_attributes(foo: :bar)
+    auto_assert {:ok, %{foo: :bar}} <- Aston.coerce_attributes({:foo, :bar})
+    auto_assert {:ok, %{}} <- Aston.coerce_attributes(nil)
+    auto_assert {:ok, nil} <- Aston.coerce_content(nil)
+  end
 
   test "coerces valid data" do
     assert {:ok,
@@ -63,7 +75,7 @@ defmodule Estructura.Aston.Test do
       }
 
     assert [[%Aston{} = deep]] = get_in(aston, Aston.access(aston, ~w|Bar Baz Deep1|))
-    assert deep.name == "Deep1"
+    auto_assert true <- deep.name == "Deep1"
 
     assert %Aston{
              name: "Bar",

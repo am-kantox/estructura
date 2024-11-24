@@ -18,6 +18,7 @@ end
 I suggest adding [`boundary`](https://hexdocs.pm/boundary) as a dependency since that is used in this project.
 
 ## Changelog
+* `1.6.0` — `jsonify: true | module()` option in a call to `Estructura.Flattenable.flatten/2`
 * `1.5.0` — no `:formulae` dependency
 * `1.4.1` — allow functions of arity 1 in `content` as coercers in a call to `Estructura.Aston.coerce/2`
 * `1.4.0` — allow coercers in a call to `Estructura.Aston.coerce/2`

@@ -23,6 +23,13 @@ defprotocol Estructura.Flattenable do
   %{"address_city" => nil, "address_street_house" => nil}
   ```
 
+  Allowed options are:
+
+  - **`coupler`** the string to concatenate nested keys with, _default:_ **`-`** 
+  - **`only`** the list of keys to select
+  - **`except`** the list of keys to ignore
+  - **`jsonify`** `true` or a json encoder implementation; if set, the values will be jsonified
+
   To enable it for your struct, use `@derive Estructura.Flattenable` or
     `@derive {Estructura.Flattenable, options}`. `Estructura` implementations derive it be default.
   """
@@ -88,12 +95,29 @@ defimpl Estructura.Flattenable, for: Map do
             Keyword.put(options, :__acc__, %{key: [k | key], acc: acc})
           )
         else
-          Map.put(acc, [k | key] |> Enum.reverse() |> Enum.join(coupler), v)
+          value =
+            options
+            |> Keyword.get(:jsonify, false)
+            |> handle_jsonify(v)
+
+          Map.put(acc, [k | key] |> Enum.reverse() |> Enum.join(coupler), value)
         end
 
       %{key: key, acc: acc}
     end)
     |> Map.fetch!(:acc)
     |> Map.filter(&filter(&1, options))
+  end
+
+  @spec handle_jsonify(nil | boolean() | module(), value) :: String.t() | value when value: term()
+  defp handle_jsonify(nil, v), do: v
+  defp handle_jsonify(false, v), do: v
+  defp handle_jsonify(true, v), do: handle_jsonify(Jason, v)
+
+  defp handle_jsonify(jsonifier, v) when is_atom(jsonifier) do
+    case jsonifier.encode(v) do
+      {:ok, json} -> jsonifier.decode!(json)
+      _ -> inspect(v)
+    end
   end
 end

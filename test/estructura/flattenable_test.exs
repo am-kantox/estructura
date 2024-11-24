@@ -1,9 +1,10 @@
 defmodule Estructura.Flattenable.Test do
   use ExUnit.Case, async: true
-  use Mneme
 
   setup_all do
     nested_map = %{
+      level_1_atom: :foo,
+      level_1_boolean: true,
       level_1_int: 42,
       level_1_float: 3.14159265,
       level_1_string: "string",
@@ -21,6 +22,8 @@ defmodule Estructura.Flattenable.Test do
 
   test "map", %{map: map} do
     assert %{
+             "level_1_atom" => :foo,
+             "level_1_boolean" => true,
              "level_1_date" => ~D[2024-11-24],
              "level_1_float" => 3.14159265,
              "level_1_int" => 42,
@@ -34,6 +37,8 @@ defmodule Estructura.Flattenable.Test do
 
   test "map with option `jsonify: true`", %{map: map} do
     assert %{
+             "level_1_atom" => :foo,
+             "level_1_boolean" => true,
              "level_1_date" => "2024-11-24",
              "level_1_float" => 3.14159265,
              "level_1_int" => 42,

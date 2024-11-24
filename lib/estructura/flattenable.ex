@@ -112,6 +112,7 @@ defimpl Estructura.Flattenable, for: Map do
   @spec handle_jsonify(nil | boolean() | module(), value) :: String.t() | value when value: term()
   defp handle_jsonify(nil, v), do: v
   defp handle_jsonify(false, v), do: v
+  defp handle_jsonify(_, v) when is_atom(v) or is_integer(v) or is_float(v), do: v
   defp handle_jsonify(true, v), do: handle_jsonify(Jason, v)
 
   defp handle_jsonify(jsonifier, v) when is_atom(jsonifier) do

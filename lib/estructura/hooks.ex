@@ -580,13 +580,9 @@ defmodule Estructura.Hooks do
     end
   else
     defp fields(module) do
-      with {set, _bag} <- :elixir_module.data_tables(module),
-           true <- :ets.member(set, {:elixir, :struct}),
-           [{{:elixir, :struct}, [_ | _] = fields}] <- :ets.lookup(set, {:elixir, :struct}) do
-        for %{field: field} <- fields, do: field
-      else
-        (_ -> [])
-      end
+      module |> Macro.struct_info!(__ENV__) |> Enum.map(& &1.field)
+    rescue
+      _ in [ArgumentError] -> []
     end
   end
 

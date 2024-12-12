@@ -571,11 +571,21 @@ defmodule Estructura.Hooks do
   ##############################################################################
 
   @spec fields(module()) :: [Cfg.key()]
-  defp fields(module) do
-    module
-    |> Module.get_attribute(:__struct__, %{})
-    |> Map.delete(:__struct__)
-    |> Map.keys()
+  if Version.compare(System.version(), "1.18.0-rc.0") == :lt do
+    defp fields(module) do
+      module
+      |> Module.get_attribute(:__struct__, %{})
+      |> Map.delete(:__struct__)
+      |> Map.keys()
+    end
+  else
+    defp fields(module) do
+      with {set, _bag} <- :elixir_module.data_tables(module),
+           true <- :ets.member(set, {:elixir, :struct}),
+           [{{:elixir, :struct}, [_ | _] = fields}] <- :ets.lookup(set, {:elixir, :struct}) do
+        for %{field: field} <- fields, do: field
+      end
+    end
   end
 
   defmacro inject_estructura(env) do

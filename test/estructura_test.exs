@@ -96,7 +96,7 @@ defmodule EstructuraTest do
       assert %ECB{into: "abc"} = Enum.into(~w[a b c], %ECB{})
 
       assert_raise Protocol.UndefinedError,
-                   ~r/protocol Collectable not implemented for %Estructura.Void/,
+                   ~r/protocol Collectable not implemented for (?:type |%)Estructura.Void/,
                    fn -> Enum.into(~w[a], %Void{}) end
     end
   end
@@ -106,7 +106,7 @@ defmodule EstructuraTest do
       assert [^i, ^i, ^i, nil] = Enum.map(%Full{foo: i, bar: i, baz: i}, &elem(&1, 1))
 
       assert_raise Protocol.UndefinedError,
-                   ~r/protocol Enumerable not implemented for %Estructura.Void/,
+                   ~r/protocol Enumerable not implemented for (?:type |%)Estructura.Void/,
                    fn -> Enum.map(%Void{}, & &1) end
     end
 

@@ -584,6 +584,8 @@ defmodule Estructura.Hooks do
            true <- :ets.member(set, {:elixir, :struct}),
            [{{:elixir, :struct}, [_ | _] = fields}] <- :ets.lookup(set, {:elixir, :struct}) do
         for %{field: field} <- fields, do: field
+      else
+        (_ -> [])
       end
     end
   end

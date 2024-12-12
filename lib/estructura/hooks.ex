@@ -574,7 +574,7 @@ defmodule Estructura.Hooks do
   if Version.compare(System.version(), "1.18.0-rc.0") == :lt do
     defp fields(module) do
       module
-      |> Module.get_attribute(:__struct__, %{})
+      |> Macro.struct!(__ENV__)
       |> Map.delete(:__struct__)
       |> Map.keys()
     end

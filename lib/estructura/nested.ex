@@ -12,8 +12,9 @@ defmodule Estructura.Nested do
   @typep mfargs :: {module(), atom(), list()}
   @typep simple_type_variants :: atom() | {atom(), any()} | mfargs()
   @typep simple_type :: {:simple, simple_type_variants()}
-  @typep estructura_type :: {:estructura, module()}
-  @typep shape :: %{required(atom()) => simple_type() | estructura_type()}
+  @typep shape :: %{required(atom()) => simple_type() | {:estructura, module()}}
+
+  @simple_parametrized_types ~w|integer float time date datetime constant string|a
 
   @doc false
   defmacro __using__(opts \\ []) do
@@ -334,7 +335,7 @@ defmodule Estructura.Nested do
         {_, %{}}, acc -> acc
         {name, [type]}, acc -> Map.put(acc, name, {:list, type})
         {name, [_ | _] = types}, acc -> Map.put(acc, name, {:mixed, types})
-        {name, type}, acc -> Map.put(acc, name, {:simple, type})
+        {name, type}, acc -> Map.put(acc, name, type(type))
       end)
       |> Map.merge(complex)
 
@@ -343,6 +344,17 @@ defmodule Estructura.Nested do
     else
       Module.create(module, module_ast(module, true, all, values, impl), __ENV__)
       {name, {:estructura, module}}
+    end
+  end
+
+  @spec type(type) :: {:simple | :remote | :type, type} when type: simple_type_variants()
+  defp type({simple, _} = type) when simple in @simple_parametrized_types, do: {:simple, type}
+  defp type(type) when not is_atom(type), do: {:remote, type}
+
+  defp type(type) do
+    case Atom.to_string(type) do
+      "Elixir.Estructura.Nested.Type." <> _ -> {:type, type}
+      _ -> {:simple, type}
     end
   end
 
@@ -363,6 +375,9 @@ defmodule Estructura.Nested do
       {name, {:list, _type}} -> {name, Map.get(values, name, [])}
       {name, {:mixed, _types}} -> {name, Map.get(values, name, [])}
       {name, {:simple, _type}} -> {name, Map.get(values, name, nil)}
+      # [TODO] [AM]
+      {name, {:remote, _type}} -> {name, Map.get(values, name, nil)}
+      {name, {:type, _type}} -> {name, Map.get(values, name, nil)}
       {name, {:estructura, module}} -> {name, struct!(module, Map.get(values, name, %{}))}
     end)
     |> Estructura.recalculate_calculated(calculated)
@@ -390,6 +405,12 @@ defmodule Estructura.Nested do
         {name, {:simple, _type}} ->
           {name, {:any, [], []}}
 
+        {name, {:remote, _type}} ->
+          {name, {:any, [], []}}
+
+        {name, {:type, _type}} ->
+          {name, {:any, [], []}}
+
         {name, {:estructura, module}} ->
           {name,
            {{:., [],
@@ -406,6 +427,9 @@ defmodule Estructura.Nested do
       {name, {:list, type}} -> {name, stream_data_type_for([type])}
       {name, {:mixed, types}} -> {name, stream_data_type_for(types)}
       {name, {:simple, type}} -> {name, stream_data_type_for(type)}
+      {name, {:remote, type}} -> {name, stream_data_type_for(type)}
+      {name, {:type, {type, opts}}} -> {name, {type, :generate, [opts]}}
+      {name, {:type, type}} -> {name, {type, :generate, []}}
       {name, {:estructura, module}} -> {name, {module, :__generator__, []}}
     end)
   end
@@ -445,8 +469,31 @@ defmodule Estructura.Nested do
   defp stream_data_type_for(const),
     do: {StreamData, :constant, [const]}
 
+  @spec coercer_and_validator(atom(), module()) :: Macro.t()
+  defp coercer_and_validator(field, type) do
+    quote generated: true, location: :keep do
+      @impl true
+      def unquote(:"coerce_#{field}")(value),
+        do: unquote(type).coerce(value)
+
+      @impl true
+      def unquote(:"validate_#{field}")(value),
+        do: unquote(type).validate(value)
+    end
+  end
+
   @spec module_ast(module(), boolean(), shape(), map(), definitions()) :: Macro.output()
   defp module_ast(module, nested?, fields, values, %{funs: funs, defs: defs}) do
+    {funs, defs} =
+      Enum.reduce(fields, {funs, defs}, fn
+        {field, {:type, type}}, {funs, defs} ->
+          {[{:coerce, field}, {:validate, field} | funs],
+           [coercer_and_validator(field, type) | defs]}
+
+        _, acc ->
+          acc
+      end)
+
     {coercions, validations} = coercions_and_validations(funs)
 
     calculated =

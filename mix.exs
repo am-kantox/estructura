@@ -97,6 +97,7 @@ defmodule Estructura.MixProject do
       groups_for_modules: [
         # Estructura,
         # Estructura.Nested,
+        # Estructura.Nested.Type,
         # Estructura.Aston,
         Protocols: [
           Estructura.Flattenable,
@@ -104,6 +105,9 @@ defmodule Estructura.MixProject do
         ],
         Generators: [
           Estructura.StreamData
+        ],
+        Types: [
+          # Estructura.Nested.Type.DateTime
         ],
         Lazy: [
           Estructura.Lazy,

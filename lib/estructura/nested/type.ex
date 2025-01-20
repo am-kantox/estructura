@@ -15,4 +15,20 @@ defmodule Estructura.Nested.Type do
 
   @doc "Validates the value as being correct"
   @callback validate(term()) :: {:ok, term()} | {:error, any()}
+
+  defmodule Scaffold do
+    @moduledoc false
+
+    @callback type_module_ast(name :: module(), opts :: keyword()) :: Macro.t()
+
+    @spec create(module(), module(), keyword()) :: module() | false
+    def create(scaffold, name, options) do
+      with true <- is_atom(scaffold),
+           true <- Code.ensure_loaded?(scaffold),
+           true <- function_exported?(scaffold, :type_module_ast, 2),
+           {:module, module, _bytecode, _} <-
+             scaffold.type_module_ast(name, options),
+           do: module
+    end
+  end
 end

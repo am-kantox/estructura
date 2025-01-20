@@ -43,6 +43,8 @@ defmodule Estructura.Nested.Test do
       assert is_float(user.data.age)
       assert is_struct(user.created_at, DateTime)
       assert is_struct(user.birthday, Date)
+      assert user.title in ~w|junior middle señor|
+      assert is_list(user.tags)
     end
   end
 
@@ -65,7 +67,9 @@ defmodule Estructura.Nested.Test do
                created_at: _,
                data: [*: Estructura.User.Data, age: _],
                name: name,
-               person: person
+               person: person,
+               tags: _,
+               title: _
              ] = Estructura.Transformer.transform(user)
 
       assert person == "#{name}, #{city}"
@@ -79,8 +83,13 @@ defmodule Estructura.Nested.Test do
                birthday: _,
                created_at: _,
                data: [age: _],
-               name: _
-             ] = Estructura.Transformer.transform(user, except: [:city, :person], type: false)
+               name: _,
+               tags: _
+             ] =
+               Estructura.Transformer.transform(user,
+                 except: [:city, :person, :title],
+                 type: false
+               )
     end
 
     check all %User{} = user <- User.__generator__() do
@@ -102,7 +111,9 @@ defmodule Estructura.Nested.Test do
         },
         birthday: user.birthday,
         created_at: user.created_at,
-        data: %{age: user.data.age}
+        data: %{age: user.data.age},
+        title: user.title,
+        tags: user.tags
       }
 
       assert {:ok, ^user} = User.cast(raw_user_ok)
@@ -115,7 +126,9 @@ defmodule Estructura.Nested.Test do
         },
         birthday: user.birthday,
         created_at: user.created_at,
-        data: %{age: user.data.age}
+        data: %{age: user.data.age},
+        title: user.title,
+        tags: user.tags
       }
 
       assert {:error,
@@ -137,7 +150,9 @@ defmodule Estructura.Nested.Test do
         address_street_house: user.address.street.house,
         birthday: user.birthday,
         created_at: user.created_at,
-        data_age: user.data.age
+        data_age: user.data.age,
+        title: user.title,
+        tags: user.tags
       }
 
       assert {:error, %KeyError{}} = User.cast(raw_user_ok)
@@ -172,7 +187,9 @@ defmodule Estructura.Nested.Test do
         address_street_house: user.address.street.house,
         birthday: user.birthday,
         created_at: user.created_at,
-        data_age: user.data.age
+        data_age: user.data.age,
+        title: user.title,
+        tags: user.tags
       }
 
       _raw_user_flatten =

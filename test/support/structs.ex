@@ -107,7 +107,10 @@ defmodule Estructura.User do
     name: :string,
     address: %{city: :string, street: %{name: [:string], house: :string}},
     person: :string,
-    data: %{age: :float}
+    data: %{age: :float},
+    birthday: Estructura.Nested.Type.Date,
+    title: {Estructura.Nested.Type.Enum, ~w|junior middle señor|},
+    tags: {Estructura.Nested.Type.Tags, ~w|backend frontend|}
   }
 
   init %{
@@ -142,7 +145,13 @@ defmodule Estructura.User do
   Now one can cast it from map as below
 
   ```elixir
-  User.cast %{address: %{city: "London", street: %{name: "Baker", house: "221 Bis"}}, data: %{age: 32}, name: "Watson"}
+  User.cast %{
+    address: %{city: "London", street: %{name: "Baker", house: "221 Bis"}},
+    data: %{age: 32},
+    name: "Watson",
+    birthday: "1973-09-30",
+    title: "señor",
+    tags: ["backend"]}
 
   {:ok,
      %Estructura.User{
@@ -152,7 +161,10 @@ defmodule Estructura.User do
        },
        data: %Estructura.User.Data{age: 32.0},
        name: "Watson",
-       person: "Watson, London"}}
+       person: "Watson, London",
+       birthday: ~D[1973-09-30],
+       title: "señor",
+       tags: ["backend"]}
   ```
 
   """
@@ -168,11 +180,13 @@ defmodule Estructura.User do
 
   shape %{
     created_at: :datetime,
-    birthday: :date,
     name: :string,
     person: :string,
     address: %{city: :string, street: %{name: [:string], house: :string}},
-    data: %{age: :float}
+    data: %{age: :float},
+    birthday: Estructura.Nested.Type.Date,
+    title: {Estructura.Nested.Type.Enum, ~w|junior middle señor|},
+    tags: {Estructura.Nested.Type.Tags, ~w|backend frontend|}
   }
 
   init %{
@@ -195,7 +209,6 @@ defmodule Estructura.User do
     end
 
     defdelegate created_at(value), to: :datetime
-    defdelegate birthday(value), to: :date
   end
 
   coerce do

@@ -144,6 +144,28 @@ defmodule Estructura.Coercers.NullableTime do
 end
 
 defmodule Estructura.Coercers.Datetime do
+  @moduledoc deprecated: "Use `Estructura.Coercers.DateTime` instead"
+  @moduledoc "Default coercer for `:datetime`, coercing strings (_ISO8601_) and integers (_epoch_)"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(%DateTime{} = value), do: {:ok, value}
+
+  def coerce(value) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, result, 0} -> {:ok, result}
+      {:ok, _result, offset} -> {:error, "Unsupported offset (#{offset})"}
+      error -> error
+    end
+  end
+
+  def coerce(value) when is_integer(value) do
+    DateTime.from_unix(value)
+  end
+end
+
+defmodule Estructura.Coercers.DateTime do
   @moduledoc "Default coercer for `:datetime`, coercing strings (_ISO8601_) and integers (_epoch_)"
 
   @behaviour Estructura.Coercer

@@ -5,6 +5,8 @@ defmodule Estructura.Nested do
   """
 
   @actions ~w|coerce validate generate|a
+  @simple_parametrized_types ~w|integer float time date datetime constant string|a
+  @metas [Estructura.Nested.Type.Enum, Estructura.Nested.Type.Tags]
 
   @typep action :: :coerce | :validate | :generate
   @typep functions :: [{:coerce, atom()} | {:validate, atom()} | {:generate, atom()}]
@@ -12,8 +14,9 @@ defmodule Estructura.Nested do
   @typep mfargs :: {module(), atom(), list()}
   @typep simple_type_variants :: atom() | {atom(), any()} | mfargs()
   @typep simple_type :: {:simple, simple_type_variants()}
-  @typep estructura_type :: {:estructura, module()}
-  @typep shape :: %{required(atom()) => simple_type() | estructura_type()}
+  @typep shape :: %{required(atom()) => simple_type() | {:estructura, module()}}
+
+  alias Estructura.Nested.Type.Scaffold
 
   @doc false
   defmacro __using__(opts \\ []) do
@@ -334,7 +337,7 @@ defmodule Estructura.Nested do
         {_, %{}}, acc -> acc
         {name, [type]}, acc -> Map.put(acc, name, {:list, type})
         {name, [_ | _] = types}, acc -> Map.put(acc, name, {:mixed, types})
-        {name, type}, acc -> Map.put(acc, name, {:simple, type})
+        {name, type}, acc -> Map.put(acc, name, type(type))
       end)
       |> Map.merge(complex)
 
@@ -345,6 +348,26 @@ defmodule Estructura.Nested do
       {name, {:estructura, module}}
     end
   end
+
+  @spec type(type) :: {:simple | :remote | :type, type} when type: simple_type_variants()
+  defp type({simple, _} = type) when simple in @simple_parametrized_types, do: {:simple, type}
+
+  defp type(type)
+       when is_atom(type)
+       when is_tuple(type) and tuple_size(type) == 2 and is_atom(elem(type, 0)) do
+    type
+    |> case do
+      {type, _} -> type
+      type -> type
+    end
+    |> Atom.to_string()
+    |> case do
+      "Elixir.Estructura.Nested.Type." <> _ -> {:type, type}
+      _ -> {:simple, type}
+    end
+  end
+
+  defp type(type) when not is_atom(type), do: {:remote, type}
 
   @spec coercions_and_validations(functions()) :: {[atom()], [atom()]}
   defp coercions_and_validations(funs) do
@@ -363,6 +386,9 @@ defmodule Estructura.Nested do
       {name, {:list, _type}} -> {name, Map.get(values, name, [])}
       {name, {:mixed, _types}} -> {name, Map.get(values, name, [])}
       {name, {:simple, _type}} -> {name, Map.get(values, name, nil)}
+      # [TODO] [AM]
+      {name, {:remote, _type}} -> {name, Map.get(values, name, nil)}
+      {name, {:type, _type}} -> {name, Map.get(values, name, nil)}
       {name, {:estructura, module}} -> {name, struct!(module, Map.get(values, name, %{}))}
     end)
     |> Estructura.recalculate_calculated(calculated)
@@ -390,6 +416,13 @@ defmodule Estructura.Nested do
         {name, {:simple, _type}} ->
           {name, {:any, [], []}}
 
+        {name, {:remote, _type}} ->
+          {name, {:any, [], []}}
+
+        # [AM] [TODO] Make it explicitly refer to `Type.t`
+        {name, {:type, _type}} ->
+          {name, {:any, [], []}}
+
         {name, {:estructura, module}} ->
           {name,
            {{:., [],
@@ -403,10 +436,30 @@ defmodule Estructura.Nested do
   @spec generator_ast(shape()) :: [{atom(), mfargs()}]
   defp generator_ast(fields) do
     Enum.map(fields, fn
-      {name, {:list, type}} -> {name, stream_data_type_for([type])}
-      {name, {:mixed, types}} -> {name, stream_data_type_for(types)}
-      {name, {:simple, type}} -> {name, stream_data_type_for(type)}
-      {name, {:estructura, module}} -> {name, {module, :__generator__, []}}
+      {name, {:list, type}} ->
+        {name, stream_data_type_for([type])}
+
+      {name, {:mixed, types}} ->
+        {name, stream_data_type_for(types)}
+
+      {name, {:simple, type}} ->
+        {name, stream_data_type_for(type)}
+
+      {name, {:remote, type}} ->
+        {name, stream_data_type_for(type)}
+
+      {name, {:type, {type, opts}}} when type in @metas ->
+        with {type, opts} <- get_name_opts(name, type, opts),
+             do: {name, {type, :generate, [opts]}}
+
+      {name, {:type, {type, opts}}} ->
+        {name, {type, :generate, [opts]}}
+
+      {name, {:type, type}} ->
+        {name, {type, :generate, []}}
+
+      {name, {:estructura, module}} ->
+        {name, {module, :__generator__, []}}
     end)
   end
 
@@ -445,8 +498,60 @@ defmodule Estructura.Nested do
   defp stream_data_type_for(const),
     do: {StreamData, :constant, [const]}
 
+  @spec coercer_and_validator(atom(), module()) :: Macro.t()
+  defp coercer_and_validator(field, type) do
+    quote generated: true, location: :keep do
+      @impl true
+      def unquote(:"coerce_#{field}")(value),
+        do: unquote(type).coerce(value)
+
+      @impl true
+      def unquote(:"validate_#{field}")(value),
+        do: unquote(type).validate(value)
+    end
+  end
+
+  @spec generate_name(field :: atom() | binary(), term(), term()) :: module()
+  defp generate_name(atom, type, opts) when is_atom(atom),
+    do: atom |> to_string() |> generate_name(type, opts)
+
+  defp generate_name(string, type, opts) when is_binary(string) do
+    Module.concat(
+      Estructura.Nested.Type,
+      "#{Macro.camelize(string)}_#{:erlang.phash2({type, opts})}"
+    )
+  end
+
+  @spec get_name_opts(atom(), module(), opts) :: {module(), opts} when opts: term()
+  defp get_name_opts(field, type, options) do
+    if Keyword.keyword?(options),
+      do: Keyword.pop_lazy(options, :name, fn -> generate_name(field, type, options) end),
+      else: {generate_name(field, type, options), options}
+  end
+
   @spec module_ast(module(), boolean(), shape(), map(), definitions()) :: Macro.output()
   defp module_ast(module, nested?, fields, values, %{funs: funs, defs: defs}) do
+    {funs, defs} =
+      Enum.reduce(fields, {funs, defs}, fn
+        {field, {:type, {type, options}}}, {funs, defs} when type in @metas ->
+          {name, opts} = get_name_opts(field, type, options)
+
+          type =
+            if Code.ensure_loaded?(name),
+              do: name,
+              else: Scaffold.create(type, name, opts)
+
+          {[{:coerce, field}, {:validate, field} | funs],
+           [coercer_and_validator(field, type) | defs]}
+
+        {field, {:type, type}}, {funs, defs} ->
+          {[{:coerce, field}, {:validate, field} | funs],
+           [coercer_and_validator(field, type) | defs]}
+
+        _, acc ->
+          acc
+      end)
+
     {coercions, validations} = coercions_and_validations(funs)
 
     calculated =

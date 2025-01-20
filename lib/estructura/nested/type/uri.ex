@@ -1,0 +1,16 @@
+defmodule Estructura.Nested.Type.URI do
+  @moduledoc """
+  `Estructura` type for `Date`
+  """
+  @behaviour Estructura.Nested.Type
+
+  @impl true
+  def generate(opts \\ []), do: Estructura.StreamData.uri(opts)
+
+  @impl true
+  defdelegate coerce(term), to: URI, as: :new
+
+  @impl true
+  def validate(%URI{} = term), do: {:ok, term}
+  def validate(other), do: {:error, "Expected URI, got: " <> inspect(other)}
+end

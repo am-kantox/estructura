@@ -5,6 +5,8 @@ defmodule Estructura.Nested do
   """
 
   @actions ~w|coerce validate generate|a
+  @simple_parametrized_types ~w|integer float time date datetime constant string|a
+  @metas [Estructura.Nested.Type.Enum, Estructura.Nested.Type.Tags]
 
   @typep action :: :coerce | :validate | :generate
   @typep functions :: [{:coerce, atom()} | {:validate, atom()} | {:generate, atom()}]
@@ -14,8 +16,7 @@ defmodule Estructura.Nested do
   @typep simple_type :: {:simple, simple_type_variants()}
   @typep shape :: %{required(atom()) => simple_type() | {:estructura, module()}}
 
-  @simple_parametrized_types ~w|integer float time date datetime constant string|a
-  @metas [Estructura.Nested.Type.Enum, Estructura.Nested.Type.Tags]
+  alias Estructura.Nested.Type.Scaffold
 
   @doc false
   defmacro __using__(opts \\ []) do
@@ -538,7 +539,7 @@ defmodule Estructura.Nested do
           type =
             if Code.ensure_loaded?(name),
               do: name,
-              else: Estructura.Nested.Type.Scaffold.create(type, name, opts)
+              else: Scaffold.create(type, name, opts)
 
           {[{:coerce, field}, {:validate, field} | funs],
            [coercer_and_validator(field, type) | defs]}

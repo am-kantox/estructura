@@ -21,7 +21,7 @@ defmodule Estructura.Nested.Type.IP do
   defmacro sigil_IP({:<<>>, _, [binary]}, _modifiers) when is_binary(binary) do
     quote generated: true, location: :keep do
       case coerce(unquote(binary)) do
-        {:ok, %__MODULE__{} = ip} -> ip
+        {:ok, %Estructura.Nested.Type.IP{} = ip} -> ip
         {:error, error} -> raise ArgumentError, message: error
       end
     end

@@ -14,3 +14,8 @@ defmodule Estructura.Nested.Type.URI do
   def validate(%URI{} = term), do: {:ok, term}
   def validate(other), do: {:error, "Expected URI, got: " <> inspect(other)}
 end
+
+defimpl Jason.Encoder, for: URI do
+  @moduledoc false
+  def encode(%URI{} = uri, _opts), do: [?", URI.to_string(uri), ?"]
+end

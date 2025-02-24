@@ -27,3 +27,5 @@ estructura-*.tar
 
 # Dialyzer PLTs
 /.dialyzer/*plt*
+
+.tool-versions

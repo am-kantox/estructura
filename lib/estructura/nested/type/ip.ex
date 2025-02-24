@@ -27,6 +27,29 @@ defmodule Estructura.Nested.Type.IP do
     end
   end
 
+  defimpl String.Chars do
+    @moduledoc false
+    import Kernel, except: [to_string: 1]
+
+    def to_string(%Estructura.Nested.Type.IP{type: :v4, n1: n1, n2: n2, n3: n3, n4: n4}) do
+      Enum.join([n1, n2, n3, n4], ".")
+    end
+
+    def to_string(%Estructura.Nested.Type.IP{
+          type: :v6,
+          n1: n1,
+          n2: n2,
+          n3: n3,
+          n4: n4,
+          n5: n5,
+          n6: n6,
+          n7: n7,
+          n8: n8
+        }) do
+      {n1, n2, n3, n4, n5, n6, n7, n8} |> :inet.ntoa() |> Kernel.to_string()
+    end
+  end
+
   defimpl Inspect do
     @moduledoc false
     import Inspect.Algebra
@@ -69,25 +92,16 @@ defmodule Estructura.Nested.Type.IP do
 
   defimpl Jason.Encoder do
     @moduledoc false
-    def encode(%Estructura.Nested.Type.IP{type: :v4, n1: n1, n2: n2, n3: n3, n4: n4}, _opts) do
-      [?", Enum.join([n1, n2, n3, n4], "."), ?"]
+    def encode(%Estructura.Nested.Type.IP{} = ip, _opts) do
+      [?", to_string(ip), ?"]
     end
+  end
 
-    def encode(
-          %Estructura.Nested.Type.IP{
-            type: :v6,
-            n1: n1,
-            n2: n2,
-            n3: n3,
-            n4: n4,
-            n5: n5,
-            n6: n6,
-            n7: n7,
-            n8: n8
-          },
-          _opts
-        ) do
-      [?", {n1, n2, n3, n4, n5, n6, n7, n8} |> :inet.ntoa() |> to_string(), ?"]
+  defimpl Estructura.Transformer do
+    @moduledoc false
+
+    def transform(value, _options) do
+      to_string(value)
     end
   end
 

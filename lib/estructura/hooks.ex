@@ -60,7 +60,7 @@ defmodule Estructura.Hooks do
     recalculate_clause =
       quote generated: true, location: :keep do
         def recalculate_calculated(%__MODULE__{} = data) do
-          Estructura.recalculate_calculated(data, @estructura_calculated_fields)
+          Estructura.recalculate_calculated(data, @estructura_calculated_fields, __MODULE__)
         end
       end
 
@@ -68,17 +68,26 @@ defmodule Estructura.Hooks do
       for key <- fields do
         quote generated: true, location: :keep do
           def put(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
-            with {:ok, value} <- coerce_value(unquote(key), value),
-                 {:ok, value} <- validate_value(unquote(key), value) do
+            with {:coercion, {:ok, value}} <- {:coercion, coerce_value(unquote(key), value)},
+                 {:validation, {:ok, value}} <- {:validation, validate_value(unquote(key), value)} do
               {:ok, recalculate_calculated(%__MODULE__{data | unquote(key) => value})}
+            else
+              {reason, {:error, error}} -> {:error, {reason, error}}
             end
           end
 
           def put!(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
             case put(data, unquote(key), value) do
-              {:ok, updated_data} -> updated_data
-              {:error, reason} when is_binary(reason) -> raise ArgumentError, reason
-              {:error, reason} -> raise ArgumentError, inspect(reason)
+              {:ok, updated_data} ->
+                updated_data
+
+              {:error, {type, reason}} ->
+                raise Estructura.Error,
+                  estructura: __MODULE__,
+                  type: type,
+                  key: unquote(key),
+                  value: value,
+                  reason: reason
             end
           end
 
@@ -168,11 +177,11 @@ defmodule Estructura.Hooks do
 
     closing =
       quote generated: true, location: :keep do
-        def put(%__MODULE__{}, key, _),
-          do: {:error, Exception.message(%KeyError{key: key, term: __MODULE__})}
+        def put(%__MODULE__{} = term, key, _),
+          do: {:error, Exception.message(%KeyError{key: key, term: term})}
 
-        def put!(%__MODULE__{}, key, _),
-          do: raise(KeyError, key: key, term: __MODULE__)
+        def put!(%__MODULE__{} = term, key, _),
+          do: raise(KeyError, key: key, term: term)
 
         def get(%__MODULE__{}, _key, default),
           do: default
@@ -184,8 +193,8 @@ defmodule Estructura.Hooks do
         def pop(%__MODULE__{} = data, _key), do: {nil, data}
 
         @impl Access
-        def get_and_update(%__MODULE__{}, key, _),
-          do: raise(KeyError, key: key, term: __MODULE__)
+        def get_and_update(%__MODULE__{} = term, key, _),
+          do: raise(KeyError, key: key, term: term)
       end
 
     [opening, recalculate_clause | clauses] ++ [closing]
@@ -227,18 +236,6 @@ defmodule Estructura.Hooks do
                     when value: any()
         end
       end
-
-    # shape =
-    #   with true <- Module.open?(module),
-    #        %{} = nested <- Module.get_attribute(module, :__estructura_nested__),
-    #        do: Map.get(nested, :shape),
-    #        else: (_ -> %{})
-
-    # IO.inspect(
-    #   fields: fields,
-    #   all_fields: all_fields,
-    #   shape: shape
-    # )
 
     Module.create(coercible, [doc | callbacks], __ENV__)
 
@@ -557,10 +554,24 @@ defmodule Estructura.Hooks do
       """
       @spec __generator__(%__MODULE__{}) :: StreamData.t(%__MODULE__{})
       def __generator__(%__MODULE__{} = this) do
+        producer =
+          if {:cast, 1} in __MODULE__.__info__(:functions) do
+            fn content ->
+              # credo:disable-for-next-line
+              case apply(__MODULE__, :cast, [content]) do
+                {:ok, %__MODULE__{} = instance} -> instance
+                _ -> nil
+              end
+            end
+          else
+            &struct!(this, &1)
+          end
+
         do_generation()
         |> StreamData.map(&Tuple.to_list/1)
         |> StreamData.map(&Enum.zip(unquote(fields), &1))
-        |> StreamData.map(&struct(this, &1))
+        |> StreamData.map(producer)
+        |> StreamData.filter(&(not is_nil(&1)))
         |> StreamData.map(&recalculate_calculated/1)
       end
 
@@ -582,7 +593,7 @@ defmodule Estructura.Hooks do
     defp fields(module) do
       module |> Macro.struct_info!(__ENV__) |> Enum.map(& &1.field)
     rescue
-      _ in [ArgumentError] -> []
+      _ in [Estructura.Error] -> []
     end
   end
 

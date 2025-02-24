@@ -156,6 +156,12 @@ defimpl Estructura.Transformer, for: [Date, Time, NaiveDateTime, DateTime] do
   end
 end
 
+defimpl Estructura.Transformer, for: URI do
+  def transform(value, _options) do
+    @for.to_string(value)
+  end
+end
+
 # defimpl Estructura.Transformer, for: Decimal do
 #   def transform(input, _options) do
 #     @for.to_string(value)

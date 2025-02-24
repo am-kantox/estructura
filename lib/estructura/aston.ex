@@ -52,7 +52,7 @@ defmodule Estructura.Aston do
   def coerce_name(value) when is_list(value) do
     {:ok, Enum.join(value, ".")}
   rescue
-    e in [ArgumentError] ->
+    e in [Estructura.Error] ->
       {:error, Exception.message(e)}
   end
 
@@ -202,7 +202,7 @@ defmodule Estructura.Aston do
 
     {:ok, result}
   rescue
-    e in [ArgumentError, KeyError] ->
+    e in [Estructura.Error, KeyError] ->
       {:error, Exception.message(e)}
   end
 

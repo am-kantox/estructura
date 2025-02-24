@@ -104,13 +104,15 @@ defmodule Estructura.User do
 
   shape %{
     created_at: :datetime,
-    name: :string,
+    name: {:string, kind_of_codepoints: Enum.concat([?a..?c, ?l..?o])},
     address: %{city: :string, street: %{name: [:string], house: :string}},
     person: :string,
+    homepage: Estructura.Nested.Type.URI,
+    ip: Estructura.Nested.Type.IP,
     data: %{age: :float},
     birthday: Estructura.Nested.Type.Date,
     title: {Estructura.Nested.Type.Enum, ~w|junior middle señor|},
-    tags: {Estructura.Nested.Type.Tags, ~w|backend frontend|}
+    tags: {:tags, ~w|backend frontend|}
   }
 
   init %{
@@ -180,9 +182,11 @@ defmodule Estructura.User do
 
   shape %{
     created_at: :datetime,
-    name: :string,
+    name: {:string, kind_of_codepoints: Enum.concat([?a..?c, ?l..?o])},
+    address: %{city: :string, street: %{name: [:string], house: :positive_integer}},
     person: :string,
-    address: %{city: :string, street: %{name: [:string], house: :string}},
+    homepage: Estructura.Nested.Type.URI,
+    ip: Estructura.Nested.Type.IP,
     data: %{age: :float},
     birthday: Estructura.Nested.Type.Date,
     title: {Estructura.Nested.Type.Enum, ~w|junior middle señor|},
@@ -207,17 +211,17 @@ defmodule Estructura.User do
         :error -> {:ok, 0.0}
       end
     end
-
-    defdelegate created_at(value), to: :datetime
   end
 
   coerce do
-    def name(value) when is_binary(value), do: {:ok, value}
-    def name(value) when is_atom(value), do: {:ok, Atom.to_string(value)}
+    defdelegate created_at(value), to: :datetime
   end
 
   validate do
     def address.street.house(house), do: {:ok, house}
+
+    def data.age(age) when age > 0, do: {:ok, age}
+    def data.age(age), do: {:error, "Age must be positive, given: #{age}"}
   end
 end
 

@@ -35,11 +35,11 @@ defmodule EstructuraTest do
       Full.put!(@full, :foo, i) == %Full{@full | foo: String.to_integer(i)}
     end
 
-    assert_raise ArgumentError, ~r/42a is not a valid integer value/, fn ->
+    assert_raise Estructura.Error, ~r/42a is not a valid integer value/, fn ->
       Full.put!(@full, :foo, "42a")
     end
 
-    assert_raise KeyError, ~r/key :not_a_field not found in: Estructura.Full/, fn ->
+    assert_raise KeyError, ~r/key :not_a_field not found in: %Estructura.Full/, fn ->
       Full.put!(@full, :not_a_field, 42)
     end
   end
@@ -68,7 +68,7 @@ defmodule EstructuraTest do
                  ~r/Estructura.Void does not implement the Access behaviour/,
                  fn -> pop_in(@void, [:foo]) end
 
-    assert_raise KeyError, ~r/key :not_a_field not found in: Estructura.Full/, fn ->
+    assert_raise KeyError, ~r/key :not_a_field not found in: %Estructura.Full/, fn ->
       put_in(@full, [:not_a_field], 42)
     end
   end
@@ -78,11 +78,11 @@ defmodule EstructuraTest do
       put_in(@full, [:foo], i) == %Full{@full | foo: String.to_integer(i)}
     end
 
-    assert_raise ArgumentError, ~r/42a is not a valid integer value/, fn ->
+    assert_raise Estructura.Error, ~r/42a is not a valid integer value/, fn ->
       put_in(@full, [:foo], "42a")
     end
 
-    assert_raise ArgumentError, ":foo must be positive", fn ->
+    assert_raise Estructura.Error, ~r/:foo must be positive/, fn ->
       put_in(@full, [:foo], -42)
     end
   end

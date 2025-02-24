@@ -99,8 +99,8 @@ defmodule Estructura.Aston.Test do
     assert {:error, "Unknown fields: [\"Bar.nameQQ\"]"} =
              Aston.coerce(%{name: "Bar", content: %{nameQQ: ""}})
 
-    assert {:error, "Cannot coerce value given for `name` field (%{foo: :bar})"} =
-             Aston.coerce(%{name: %{foo: :bar}})
+    assert {:error, message} = Aston.coerce(%{name: %{foo: :bar}})
+    assert message =~ "Cannot coerce value given for `name` field (%{foo: :bar})"
 
     assert {:error,
             "Unknown fields: [\"Bar.Baz.Baz2.nameA\"]\nUnknown fields: [\"Bar.Baz.Baz2.nameB\"]"} =

@@ -40,7 +40,7 @@ defmodule Estructura.Nested.Type.Tags do
         if is_function(unquote(coercer), 1) do
           def coerce(term), do: unquote(coercer).(term)
         else
-          def coerce(term), do: {:ok, term}
+          def coerce(term), do: {:ok, Enum.uniq(term)}
         end
 
         @impl true

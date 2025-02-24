@@ -5,7 +5,8 @@ defmodule Estructura.Nested do
   """
 
   @actions ~w|coerce validate generate|a
-  @simple_parametrized_types ~w|integer float time date datetime constant string|a
+  @type_module_prefix "Elixir.Estructura.Nested.Type"
+  @simple_parametrized_types ~w|integer float constant|a
   @metas [Estructura.Nested.Type.Enum, Estructura.Nested.Type.Tags]
 
   @typep action :: :coerce | :validate | :generate
@@ -232,13 +233,18 @@ defmodule Estructura.Nested do
 
         num = if num < 1, do: Enum.count(String.split(key, delim)), else: num
         key_paths = Enum.map(1..num//1, &String.split(key, "_", parts: &1))
+        reversed_path = Enum.reverse(path)
 
         Enum.reduce_while(key_paths, {false, into}, fn key_path, {false, into} ->
           try do
-            key_path = Enum.reverse(path) ++ atomize(key_path)
+            key_path = reversed_path ++ atomize(key_path)
             {:halt, {true, put_in(into, key_path, value)}}
           rescue
-            _e in [ArgumentError, KeyError] -> {:cont, {false, into}}
+            # `ArgumentError` is “no existing atom,” meaning no `key` with this name
+            _e in [ArgumentError, Estructura.Error, KeyError] ->
+              # [AM] Wrap `KeyError` into `Estructura.Error`
+              # IO.inspect(e: e, key_path: key_path, into: into)
+              {:cont, {false, into}}
           end
         end)
         |> case do
@@ -362,8 +368,17 @@ defmodule Estructura.Nested do
     end
     |> Atom.to_string()
     |> case do
-      "Elixir.Estructura.Nested.Type." <> _ -> {:type, type}
-      _ -> {:simple, type}
+      @type_module_prefix <> "." <> _ ->
+        {:type, type}
+
+      simple ->
+        maybe_type = Module.concat(@type_module_prefix, Macro.camelize(simple))
+
+        case {Code.ensure_loaded?(maybe_type), type} do
+          {false, _} -> {:simple, type}
+          {true, {_, opts}} -> {:type, {maybe_type, opts}}
+          {true, _} -> {:type, maybe_type}
+        end
     end
   end
 
@@ -544,6 +559,10 @@ defmodule Estructura.Nested do
           {[{:coerce, field}, {:validate, field} | funs],
            [coercer_and_validator(field, type) | defs]}
 
+        {field, {:type, {type, _options}}}, {funs, defs} ->
+          {[{:coerce, field}, {:validate, field} | funs],
+           [coercer_and_validator(field, type) | defs]}
+
         {field, {:type, type}}, {funs, defs} ->
           {[{:coerce, field}, {:validate, field} | funs],
            [coercer_and_validator(field, type) | defs]}
@@ -610,10 +629,15 @@ defmodule Estructura.Nested do
 
         If `split: true` is passed as an option, it will attempt to put `foo_bar` into nested `%{foo: %{bar: _}}`
         """
-        def cast(%{} = content, options \\ []),
+        def cast(content, options \\ [])
+
+        def cast(%{} = content, options),
           do: Estructura.Nested.from_term(unquote(module), content, options)
 
-        def cast!(%{} = content, options \\ []) do
+        def cast(content, options) when is_list(content),
+          do: content |> Map.new() |> cast(options)
+
+        def cast!(content, options \\ []) when is_map(content) or is_list(content) do
           content
           |> cast(options)
           |> case do

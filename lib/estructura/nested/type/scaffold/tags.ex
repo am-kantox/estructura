@@ -28,7 +28,12 @@ defmodule Estructura.Nested.Type.Tags do
         def generate(opts \\ []) do
           only = Keyword.get(opts, :only, @elements)
           except = Keyword.get(opts, :except, [])
-          StreamData.list_of(StreamData.member_of(only -- except))
+
+          only
+          |> Kernel.--(except)
+          |> StreamData.member_of()
+          |> StreamData.list_of()
+          |> StreamData.map(&Enum.uniq/1)
         end
 
         @impl true

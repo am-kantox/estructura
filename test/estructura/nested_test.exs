@@ -13,7 +13,7 @@ defmodule Estructura.Nested.Test do
   @user %User{}
 
   property "Access" do
-    check all i <- float() do
+    check all i <- float(min: 0.1) do
       expected = %User{@user | data: %Data{@user.data | age: i}}
 
       assert put_in(@user, [:data, :age], i) == expected
@@ -22,12 +22,14 @@ defmodule Estructura.Nested.Test do
   end
 
   property "Coercion" do
-    check all i <- integer() do
+    check all i <- positive_integer() do
       expected = %User{@user | data: %Data{@user.data | age: 1.0 * i}}
       assert put_in(@user, [:data, :age], i) == expected
     end
 
     check all i <- string(?0..?9, min_length: 1, max_length: 3) do
+      i = "1" <> i
+
       expected = %User{@user | data: %Data{@user.data | age: 1.0 * String.to_integer(i)}}
       assert put_in(@user, [:data, :age], i) == expected
     end
@@ -39,8 +41,8 @@ defmodule Estructura.Nested.Test do
       assert is_binary(user.address.city)
       assert is_list(user.address.street.name)
       assert Enum.all?(user.address.street.name, &is_binary/1)
-      assert is_binary(user.address.street.house)
-      assert is_float(user.data.age)
+      assert is_integer(user.address.street.house) and user.address.street.house > 0
+      assert is_float(user.data.age) and user.data.age > 0
       assert is_struct(user.created_at, DateTime)
       assert is_struct(user.birthday, Date)
       assert user.title in ~w|junior middle señor|
@@ -66,6 +68,8 @@ defmodule Estructura.Nested.Test do
                birthday: _,
                created_at: _,
                data: [*: Estructura.User.Data, age: _],
+               homepage: _,
+               ip: _,
                name: name,
                person: person,
                tags: _,
@@ -83,6 +87,8 @@ defmodule Estructura.Nested.Test do
                birthday: _,
                created_at: _,
                data: [age: _],
+               homepage: _,
+               ip: _,
                name: _,
                tags: _
              ] =
@@ -110,6 +116,8 @@ defmodule Estructura.Nested.Test do
           street: %{name: user.address.street.name, house: user.address.street.house}
         },
         birthday: user.birthday,
+        homepage: user.homepage,
+        ip: user.ip,
         created_at: user.created_at,
         data: %{age: user.data.age},
         title: user.title,
@@ -125,6 +133,8 @@ defmodule Estructura.Nested.Test do
           street: %{nombre: user.address.street.name, casa: user.address.street.house}
         },
         birthday: user.birthday,
+        homepage: user.homepage,
+        ip: user.ip,
         created_at: user.created_at,
         data: %{age: user.data.age},
         title: user.title,
@@ -149,6 +159,8 @@ defmodule Estructura.Nested.Test do
         address_street_name: user.address.street.name,
         address_street_house: user.address.street.house,
         birthday: user.birthday,
+        homepage: user.homepage,
+        ip: user.ip,
         created_at: user.created_at,
         data_age: user.data.age,
         title: user.title,
@@ -186,6 +198,8 @@ defmodule Estructura.Nested.Test do
         address_street_name: user.address.street.name,
         address_street_house: user.address.street.house,
         birthday: user.birthday,
+        homepage: user.homepage,
+        ip: user.ip,
         created_at: user.created_at,
         data_age: user.data.age,
         title: user.title,

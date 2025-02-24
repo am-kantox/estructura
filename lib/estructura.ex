@@ -286,7 +286,7 @@ defmodule Estructura do
   def coerce(module, data, options) when is_list(data) do
     if Keyword.keyword?(data),
       do: coerce(module, Map.new(data), options),
-      else: {:error, %ArgumentError{message: "Cannot coerce a list ‹#{inspect(data)}›"}}
+      else: {:error, %Estructura.Error{message: "Cannot coerce a list ‹#{inspect(data)}›"}}
   end
 
   def coerce(module, %{} = map, options) when is_atom(module),
@@ -312,6 +312,7 @@ defmodule Estructura do
               f.(acc)
           end
 
+        # [AM] coerce and validate manually
         Map.put(acc, field, value)
       end
     )

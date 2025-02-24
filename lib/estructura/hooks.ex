@@ -60,7 +60,7 @@ defmodule Estructura.Hooks do
     recalculate_clause =
       quote generated: true, location: :keep do
         def recalculate_calculated(%__MODULE__{} = data) do
-          Estructura.recalculate_calculated(data, @estructura_calculated_fields)
+          Estructura.recalculate_calculated(data, @estructura_calculated_fields, __MODULE__)
         end
       end
 
@@ -68,12 +68,6 @@ defmodule Estructura.Hooks do
       for key <- fields do
         quote generated: true, location: :keep do
           def put(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
-            # [AM] maybe do that instead?
-            # with {:ok, value} <- coerce_value(unquote(key), value),
-            #      {:ok, value} <- validate_value(unquote(key), value) do
-            #   {:ok, recalculate_calculated(%__MODULE__{data | unquote(key) => value})}
-            # end
-
             with {:coercion, {:ok, value}} <- {:coercion, coerce_value(unquote(key), value)},
                  {:validation, {:ok, value}} <- {:validation, validate_value(unquote(key), value)} do
               {:ok, recalculate_calculated(%__MODULE__{data | unquote(key) => value})}
@@ -242,18 +236,6 @@ defmodule Estructura.Hooks do
                     when value: any()
         end
       end
-
-    # shape =
-    #   with true <- Module.open?(module),
-    #        %{} = nested <- Module.get_attribute(module, :__estructura_nested__),
-    #        do: Map.get(nested, :shape),
-    #        else: (_ -> %{})
-
-    # IO.inspect(
-    #   fields: fields,
-    #   all_fields: all_fields,
-    #   shape: shape
-    # )
 
     Module.create(coercible, [doc | callbacks], __ENV__)
 

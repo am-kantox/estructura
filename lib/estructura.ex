@@ -293,11 +293,13 @@ defmodule Estructura do
     do: Estructura.Nested.from_term(module, map, options)
 
   @doc false
-  def recalculate_calculated(data, calculated) when is_list(data) do
-    data |> Map.new() |> recalculate_calculated(calculated) |> Map.to_list()
+  def recalculate_calculated(data, calculated, module \\ nil)
+
+  def recalculate_calculated(data, calculated, module) when is_list(data) do
+    data |> Map.new() |> recalculate_calculated(calculated, module) |> Map.to_list()
   end
 
-  def recalculate_calculated(%{} = data, calculated) do
+  def recalculate_calculated(%{} = data, calculated, module) do
     Enum.reduce(
       calculated,
       data,
@@ -312,8 +314,15 @@ defmodule Estructura do
               f.(acc)
           end
 
-        # [AM] coerce and validate manually
-        Map.put(acc, field, value)
+        with true <- Code.ensure_loaded?(module),
+             true <- function_exported?(module, :"coerce_#{field}", 1),
+             {:ok, coerced} <- apply(module, :"coerce_#{field}", [value]),
+             true <- function_exported?(module, :"validate_#{field}", 1),
+             {:ok, validated} <- apply(module, :"validate_#{field}", [coerced]) do
+          Map.put(acc, field, validated)
+        else
+          _ -> Map.put(acc, field, value)
+        end
       end
     )
   end

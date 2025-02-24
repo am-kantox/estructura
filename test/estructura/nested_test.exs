@@ -192,36 +192,50 @@ defmodule Estructura.Nested.Test do
 
   property "Flattenable" do
     check all %User{} = user <- User.__generator__() do
-      raw_user_ok = %{
-        name: user.name,
-        address_city: user.address.city,
-        address_street_name: user.address.street.name,
-        address_street_house: user.address.street.house,
-        birthday: user.birthday,
-        homepage: user.homepage,
-        ip: user.ip,
-        created_at: user.created_at,
-        data_age: user.data.age,
-        title: user.title,
-        tags: user.tags
-      }
+      raw_user_flatten =
+        raw_user_ok = %{
+          name: user.name,
+          address_city: user.address.city,
+          address_street_name: user.address.street.name,
+          address_street_house: user.address.street.house,
+          birthday: user.birthday,
+          person: user.person,
+          homepage: user.homepage,
+          ip: user.ip,
+          created_at: user.created_at,
+          data_age: user.data.age,
+          title: user.title,
+          tags: user.tags
+        }
 
-      _raw_user_flatten =
+      raw_user_flatten =
         if user.address.street.name == [] do
-          raw_user_ok
+          raw_user_flatten
         else
           user.address.street.name
           |> Enum.with_index()
-          |> Enum.reduce(Map.delete(raw_user_ok, :address_street_name), fn {v, idx}, acc ->
+          |> Enum.reduce(Map.delete(raw_user_flatten, :address_street_name), fn {v, idx}, acc ->
             Map.put(acc, "address_street_name_#{idx}", v)
           end)
         end
+
+      raw_user_flatten =
+        if user.tags == [] do
+          raw_user_flatten
+        else
+          user.tags
+          |> Enum.with_index()
+          |> Enum.reduce(Map.delete(raw_user_flatten, :tags), fn {v, idx}, acc ->
+            Map.put(acc, "tags_#{idx}", v)
+          end)
+        end
+
+      raw_user_flatten =
+        raw_user_flatten
         |> Map.new(fn {k, v} -> {to_string(k), v} end)
-        |> Map.drop(~w|birthday created_at person|)
 
       assert {:ok, ^user} = User.cast(raw_user_ok, split: true)
-      # [AM] I cannot figure out what’s wrong
-      # assert ^raw_user_flatten = Estructura.Flattenable.flatten(user)
+      assert ^raw_user_flatten = Estructura.Flattenable.flatten(user)
     end
   end
 end

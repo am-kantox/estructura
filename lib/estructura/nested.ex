@@ -242,8 +242,6 @@ defmodule Estructura.Nested do
           rescue
             # `ArgumentError` is “no existing atom,” meaning no `key` with this name
             _e in [ArgumentError, Estructura.Error, KeyError] ->
-              # [AM] Wrap `KeyError` into `Estructura.Error`
-              # IO.inspect(e: e, key_path: key_path, into: into)
               {:cont, {false, into}}
           end
         end)
@@ -392,8 +390,10 @@ defmodule Estructura.Nested do
     }
   end
 
-  @spec struct_ast(shape(), map(), keyword() | map()) :: [{atom(), nil | list() | struct()}]
-  defp struct_ast(fields, values, calculated) do
+  @spec struct_ast(module(), shape(), map(), keyword() | map()) :: [
+          {atom(), nil | list() | struct()}
+        ]
+  defp struct_ast(module, fields, values, calculated) do
     values = values || %{}
 
     fields
@@ -406,7 +406,7 @@ defmodule Estructura.Nested do
       {name, {:type, _type}} -> {name, Map.get(values, name, nil)}
       {name, {:estructura, module}} -> {name, struct!(module, Map.get(values, name, %{}))}
     end)
-    |> Estructura.recalculate_calculated(calculated)
+    |> Estructura.recalculate_calculated(calculated, module)
   end
 
   @spec struct_type_ast(module(), shape()) :: {:%{}, keyword(), keyword()}
@@ -578,7 +578,7 @@ defmodule Estructura.Nested do
         do: Module.get_attribute(module, :__estructura_nested__, %{}) |> Map.get(:calculated, []),
         else: []
 
-    struct = struct_ast(fields, values, calculated)
+    struct = struct_ast(module, fields, values, calculated)
     struct_type = struct_type_ast(module, fields)
     generator = generator_ast(fields)
 

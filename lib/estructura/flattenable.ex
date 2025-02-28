@@ -89,18 +89,23 @@ defimpl Estructura.Flattenable, for: Map do
     map
     |> Enum.reduce(outer_acc, fn {k, v}, %{key: key, acc: acc} ->
       acc =
-        if not is_nil(Estructura.Flattenable.impl_for(v)) and v != %{} and v != [] do
-          Estructura.Flattenable.flatten(
-            v,
-            Keyword.put(options, :__acc__, %{key: [k | key], acc: acc})
-          )
-        else
-          value =
-            options
-            |> Keyword.get(:jsonify, false)
-            |> handle_jsonify(v)
+        cond do
+          v == %{} or v == [] ->
+            acc
 
-          Map.put(acc, [k | key] |> Enum.reverse() |> Enum.join(coupler), value)
+          not is_nil(Estructura.Flattenable.impl_for(v)) ->
+            Estructura.Flattenable.flatten(
+              v,
+              Keyword.put(options, :__acc__, %{key: [k | key], acc: acc})
+            )
+
+          true ->
+            value =
+              options
+              |> Keyword.get(:jsonify, false)
+              |> handle_jsonify(v)
+
+            Map.put(acc, [k | key] |> Enum.reverse() |> Enum.join(coupler), value)
         end
 
       %{key: key, acc: acc}

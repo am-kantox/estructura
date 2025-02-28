@@ -90,10 +90,12 @@ defmodule Estructura.Nested.Type.IP do
     end
   end
 
-  defimpl Jason.Encoder do
-    @moduledoc false
-    def encode(%Estructura.Nested.Type.IP{} = ip, _opts) do
-      [?", to_string(ip), ?"]
+  if Code.ensure_loaded?(Jason.Encoder) do
+    defimpl Jason.Encoder do
+      @moduledoc false
+      def encode(%Estructura.Nested.Type.IP{} = ip, _opts) do
+        [?", to_string(ip), ?"]
+      end
     end
   end
 

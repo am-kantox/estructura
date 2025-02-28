@@ -92,7 +92,7 @@ defmodule Estructura.User do
   Nested example. The source code of the file follows.
 
   ```elixir
-  
+
   defmodule Calculated do
     @moduledoc false
     def person(this) do
@@ -107,7 +107,7 @@ defmodule Estructura.User do
     name: {:string, kind_of_codepoints: Enum.concat([?a..?c, ?l..?o])},
     address: %{city: :string, street: %{name: [:string], house: :string}},
     person: :string,
-    homepage: Estructura.Nested.Type.URI,
+    homepage: {:list_of, Estructura.Nested.Type.URI},
     ip: Estructura.Nested.Type.IP,
     data: %{age: :float},
     birthday: Estructura.Nested.Type.Date,
@@ -185,7 +185,7 @@ defmodule Estructura.User do
     name: {:string, kind_of_codepoints: Enum.concat([?a..?c, ?l..?o])},
     address: %{city: :string, street: %{name: [:string], house: :positive_integer}},
     person: :string,
-    homepage: Estructura.Nested.Type.URI,
+    homepage: {:list_of, Estructura.Nested.Type.URI},
     ip: Estructura.Nested.Type.IP,
     data: %{age: :float},
     birthday: Estructura.Nested.Type.Date,
@@ -215,6 +215,24 @@ defmodule Estructura.User do
 
   coerce do
     defdelegate created_at(value), to: :datetime
+
+    def homepage(value) when is_list(value) do
+      value
+      |> Enum.reduce({:ok, []}, fn
+        value, {:error, errors} ->
+          case Estructura.Nested.Type.URI.coerce(value) do
+            {:ok, _} -> {:error, errors}
+            {:error, error} -> {:error, [error | errors]}
+          end
+
+        value, {:ok, result} ->
+          case Estructura.Nested.Type.URI.coerce(value) do
+            {:ok, coerced} -> {:ok, [coerced | result]}
+            {:error, error} -> {:error, [error]}
+          end
+      end)
+      |> then(fn {kind, list} -> {kind, Enum.reverse(list)} end)
+    end
   end
 
   validate do

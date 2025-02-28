@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.7.2"
+  @version "1.8.0"
 
   def project do
     [
@@ -115,6 +115,7 @@ defmodule Estructura.MixProject do
           Estructura.Nested.Type.Date,
           Estructura.Nested.Type.DateTime,
           Estructura.Nested.Type.IP,
+          Estructura.Nested.Type.String,
           Estructura.Nested.Type.Time,
           Estructura.Nested.Type.URI
         ],

@@ -209,26 +209,25 @@ defmodule Estructura.Nested.Test do
         }
 
       raw_user_flatten =
-        if user.address.street.name == [] do
-          raw_user_flatten
-        else
-          user.address.street.name
-          |> Enum.with_index()
-          |> Enum.reduce(Map.delete(raw_user_flatten, :address_street_name), fn {v, idx}, acc ->
-            Map.put(acc, "address_street_name_#{idx}", v)
-          end)
-        end
+        user.homepage
+        |> Enum.with_index()
+        |> Enum.reduce(Map.delete(raw_user_flatten, :homepage), fn {hp, idx}, acc ->
+          Map.put(acc, :"homepage_#{idx}", hp)
+        end)
 
       raw_user_flatten =
-        if user.tags == [] do
-          raw_user_flatten
-        else
-          user.tags
-          |> Enum.with_index()
-          |> Enum.reduce(Map.delete(raw_user_flatten, :tags), fn {v, idx}, acc ->
-            Map.put(acc, "tags_#{idx}", v)
-          end)
-        end
+        user.address.street.name
+        |> Enum.with_index()
+        |> Enum.reduce(Map.delete(raw_user_flatten, :address_street_name), fn {v, idx}, acc ->
+          Map.put(acc, "address_street_name_#{idx}", v)
+        end)
+
+      raw_user_flatten =
+        user.tags
+        |> Enum.with_index()
+        |> Enum.reduce(Map.delete(raw_user_flatten, :tags), fn {v, idx}, acc ->
+          Map.put(acc, "tags_#{idx}", v)
+        end)
 
       raw_user_flatten =
         raw_user_flatten

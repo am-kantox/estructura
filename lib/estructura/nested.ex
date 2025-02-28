@@ -448,7 +448,7 @@ defmodule Estructura.Nested do
     {:%{}, [], [{:__struct__, module} | content]}
   end
 
-  @spec generator_ast(shape()) :: [{atom(), mfargs()}]
+  @spec generator_ast(shape() | [{:unknown, simple_type()}]) :: [{atom(), mfargs()}]
   defp generator_ast(fields) do
     Enum.map(fields, fn
       {name, {:list, type}} ->
@@ -482,20 +482,24 @@ defmodule Estructura.Nested do
   defp stream_data_type_for({:datetime, opts}),
     do: {Estructura.StreamData, :datetime, [opts]}
 
-  defp stream_data_type_for(:datetime),
-    do: stream_data_type_for({:datetime, []})
-
   defp stream_data_type_for({:date, opts}),
     do: {Estructura.StreamData, :date, [opts]}
 
+  defp stream_data_type_for({stream_data_gen, opts}) when is_atom(stream_data_gen) do
+    params =
+      case generator_ast([{:unknown, type(opts)}]) do
+        [{_, {StreamData, gen, []}}] -> gen
+        [{_, params}] -> params
+      end
+
+    {StreamData, stream_data_gen, [params]}
+  end
+
+  defp stream_data_type_for(:datetime),
+    do: stream_data_type_for({:datetime, []})
+
   defp stream_data_type_for(:date),
     do: stream_data_type_for({:date, []})
-
-  defp stream_data_type_for({:constant, const}),
-    do: {StreamData, :constant, [const]}
-
-  defp stream_data_type_for({:string, kind}),
-    do: {StreamData, :string, [kind]}
 
   defp stream_data_type_for(:string),
     do: stream_data_type_for({:string, :alphanumeric})

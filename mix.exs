@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.8.0"
+  @version "1.8.1"
 
   def project do
     [
@@ -125,6 +125,7 @@ defmodule Estructura.MixProject do
         ],
         Coercers: [
           Estructura.Coercer,
+          Estructura.Coercers.Atom,
           Estructura.Coercers.Date,
           Estructura.Coercers.Datetime,
           Estructura.Coercers.DateTime,

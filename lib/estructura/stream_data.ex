@@ -118,13 +118,31 @@ defmodule Estructura.StreamData do
   ```
   """
   def uri(options \\ []) do
+    path_fn = fn ->
+      if Keyword.get(options, :with_path),
+        do: ~w[path1 path2 path3/path4],
+        else: [nil, "/", "/path"]
+    end
+
+    query_fn = fn ->
+      if Keyword.get(options, :with_query),
+        do: ~w[foo=42 bar=baz query=ok],
+        else: [nil, "foo=42", "bar=baz"]
+    end
+
+    fragment_fn = fn ->
+      if Keyword.get(options, :with_fragment),
+        do: ~w[anchor1 anchor2],
+        else: [nil, "anchor1", "anchor2"]
+    end
+
     schemes = Keyword.get(options, :scheme, ["https"])
     userinfos = Keyword.get(options, :userinfo, [nil])
     hosts = Keyword.get(options, :host, ["example.com"])
     ports = Keyword.get(options, :port, [nil, 80, 443])
-    paths = Keyword.get(options, :path, [nil, "/", "/path"])
-    queries = Keyword.get(options, :query, [nil, "foo=42", "bar=ok"])
-    fragments = Keyword.get(options, :fragment, [nil, "anchor1", "anchor2"])
+    paths = Keyword.get_lazy(options, :path, path_fn)
+    queries = Keyword.get_lazy(options, :query, query_fn)
+    fragments = Keyword.get_lazy(options, :fragment, fragment_fn)
 
     StreamData.bind(StreamData.member_of(schemes), fn scheme ->
       StreamData.bind(StreamData.member_of(userinfos), fn userinfo ->
@@ -133,6 +151,14 @@ defmodule Estructura.StreamData do
             StreamData.bind(StreamData.member_of(paths), fn path ->
               StreamData.bind(StreamData.member_of(queries), fn query ->
                 StreamData.bind(StreamData.member_of(fragments), fn fragment ->
+                  path =
+                    case path do
+                      nil -> path
+                      "" -> path
+                      "/" <> _ -> path
+                      path when is_binary(path) -> "/" <> path
+                    end
+
                   userinfo = if userinfo, do: "#{userinfo}@", else: ""
                   port = if port, do: ":#{port}", else: ""
                   query = if query, do: "?#{query}", else: ""
@@ -214,7 +240,7 @@ defmodule Estructura.StreamData do
   Generates an instance of `Estructura.Nested.Type.IP.t()`. This generator is unshrinkable.
   """
   def ip(options \\ []) do
-    {type, options} = Keyword.pop(options, :type, [:v4])
+    {type, options} = Keyword.pop(options, :version, Keyword.get(options, :type, [:v4]))
 
     case List.wrap(type) do
       [:v4] -> ip4(options)

@@ -271,3 +271,71 @@ defmodule Estructura.Diff do
 
   defstruct same: 42, other: :foo, nested: nil
 end
+
+defmodule Estructura.IP do
+  @moduledoc false
+
+  use Estructura.Nested
+
+  shape %{
+    ip: Estructura.Nested.Type.IP
+  }
+end
+
+defmodule Estructura.Status do
+  @moduledoc false
+  use Estructura.Nested.Type.Enum, elements: [:online, :offline, :maintenance], coercer: :atom
+end
+
+defmodule Estructura.Tags do
+  @moduledoc false
+  use Estructura.Nested.Type.Tags, elements: [:critical, :warning, :info], coercer: :atom
+end
+
+defmodule Estructura.Internals do
+  @moduledoc false
+
+  use Estructura.Nested
+
+  shape %{
+    ip: Estructura.Nested.Type.IP,
+    tags: Estructura.Tags,
+    status: Estructura.Status
+  }
+end
+
+defmodule Estructura.Server do
+  @moduledoc false
+  use Estructura.Nested
+
+  shape %{
+    name: Estructura.Nested.Type.String,
+    ip: Estructura.Nested.Type.IP,
+    status: Estructura.Status,
+    uri: Estructura.Nested.Type.URI,
+    last_check: Estructura.Nested.Type.DateTime,
+    tags: Estructura.Tags,
+    services: %{
+      http: %{port: :positive_integer, status: Estructura.Status},
+      https: %{port: :positive_integer, status: Estructura.Status}
+    }
+  }
+
+  init(%{
+    name: "",
+    status: :offline,
+    tags: [],
+    services: %{
+      http: %{port: 80, status: :online},
+      https: %{port: 443, status: :online}
+    }
+  })
+
+  # coerce do
+  #   def services.http.status(s) when is_binary(s), do: String.to_existing_atom(s)
+  #   def services.http.status(a) when is_atom(a), do: a
+  #   def services.https.status(s) when is_binary(s), do: String.to_existing_atom(s)
+  #   def services.https.status(a) when is_atom(a), do: a
+  # end
+end
+

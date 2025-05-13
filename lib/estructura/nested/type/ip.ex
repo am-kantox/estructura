@@ -4,6 +4,8 @@ defmodule Estructura.Nested.Type.IP do
   """
   @behaviour Estructura.Nested.Type
 
+  alias __MODULE__
+
   @type t :: %{
           __struct__: __MODULE__,
           type: :v4 | :v6,
@@ -19,11 +21,9 @@ defmodule Estructura.Nested.Type.IP do
   defstruct type: :v4, n1: 127, n2: 0, n3: 0, n4: 1, n5: -1, n6: -1, n7: -1, n8: -1
 
   defmacro sigil_IP({:<<>>, _, [binary]}, _modifiers) when is_binary(binary) do
-    quote generated: true, location: :keep do
-      case coerce(unquote(binary)) do
-        {:ok, %Estructura.Nested.Type.IP{} = ip} -> ip
-        {:error, error} -> raise ArgumentError, message: error
-      end
+    case IP.coerce(binary) do
+      {:ok, %IP{} = ip} -> quote do: unquote(Macro.escape(ip))
+      {:error, error} -> quote do: raise(ArgumentError, message: unquote(error))
     end
   end
 
@@ -89,6 +89,11 @@ defmodule Estructura.Nested.Type.IP do
       ])
     end
   end
+
+  # defimpl Estructura.Flattenable do
+  #   @moduledoc false
+  #   def flatten(%Estructura.Nested.Type.IP{} = ip, _opts), do: to_string(ip)
+  # end
 
   if Code.ensure_loaded?(Jason.Encoder) do
     defimpl Jason.Encoder do

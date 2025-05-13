@@ -370,12 +370,15 @@ defmodule Estructura.Nested do
         {:type, type}
 
       simple ->
-        maybe_type = Module.concat(@type_module_prefix, Macro.camelize(simple))
+        maybe_type = Module.concat([simple])
+        maybe_nested_type = Module.concat(@type_module_prefix, Macro.camelize(simple))
 
-        case {Code.ensure_loaded?(maybe_type), type} do
-          {false, _} -> {:simple, type}
-          {true, {_, opts}} -> {:type, {maybe_type, opts}}
-          {true, _} -> {:type, maybe_type}
+        case {Code.ensure_loaded?(maybe_type), Code.ensure_loaded?(maybe_nested_type), type} do
+          {false, false, _} -> {:simple, type}
+          {true, _, {_, opts}} -> {:type, {maybe_type, opts}}
+          {true, _, _} -> {:type, maybe_type}
+          {_, true, {_, opts}} -> {:type, {maybe_nested_type, opts}}
+          {_, true, _} -> {:type, maybe_nested_type}
         end
     end
   end

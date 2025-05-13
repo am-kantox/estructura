@@ -94,10 +94,15 @@ defimpl Estructura.Flattenable, for: Map do
             acc
 
           not is_nil(Estructura.Flattenable.impl_for(v)) ->
-            Estructura.Flattenable.flatten(
-              v,
-              Keyword.put(options, :__acc__, %{key: [k | key], acc: acc})
-            )
+            value =
+              Estructura.Flattenable.flatten(
+                v,
+                Keyword.put(options, :__acc__, %{key: [k | key], acc: acc})
+              )
+
+            if is_nil(Estructura.Flattenable.impl_for(value)),
+              do: Map.put(acc, [k | key] |> Enum.reverse() |> Enum.join(coupler), value),
+              else: value
 
           true ->
             value =

@@ -212,7 +212,7 @@ defmodule Estructura.Nested.Test do
         user.homepage
         |> Enum.with_index()
         |> Enum.reduce(Map.delete(raw_user_flatten, :homepage), fn {hp, idx}, acc ->
-          Map.put(acc, :"homepage_#{idx}", hp)
+          Map.put(acc, :"homepage_#{idx}", to_string(hp))
         end)
 
       raw_user_flatten =

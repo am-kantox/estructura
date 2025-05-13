@@ -11,9 +11,9 @@ defmodule Estructura.Nested.Type.Tags do
       {elements, coercer, encoder} =
         if Keyword.keyword?(opts) do
           {
-            opts |> Keyword.fetch!(:elements) |> Macro.escape(),
-            opts |> Keyword.get(:coercer) |> Macro.escape(),
-            opts |> Keyword.get(:encoder) |> Macro.escape()
+            Keyword.fetch!(opts, :elements),
+            Keyword.get(opts, :coercer),
+            Keyword.get(opts, :encoder)
           }
         else
           {opts, nil, nil}
@@ -37,10 +37,33 @@ defmodule Estructura.Nested.Type.Tags do
         end
 
         @impl true
-        if is_function(unquote(coercer), 1) do
-          def coerce(term), do: unquote(coercer).(term)
-        else
-          def coerce(term), do: {:ok, Enum.uniq(term)}
+        case unquote(coercer) do
+          fun when is_function(fun, 1) ->
+            def coerce(term), do: unquote(coercer).(term)
+
+          nil ->
+            def coerce(term), do: {:ok, Enum.uniq(term)}
+
+          :atom ->
+            def coerce(term) do
+              term
+              |> Enum.reduce_while({:ok, []}, fn value, {:ok, result} ->
+                case Estructura.Coercers.Atom.coerce(value) do
+                  {:ok, value} -> {:cont, {:ok, [value | result]}}
+                  {:error, reason} -> {:halt, {:error, reason}}
+                end
+              end)
+              |> case do
+                {:ok, results} -> {:ok, results |> Enum.reverse() |> Enum.uniq()}
+                other -> other
+              end
+            end
+
+          atom ->
+            def coerce(term), do: unquote(coercer).coerce(term)
+
+          other ->
+            def coerce(term), do: {:error, {:unexpected_coercer, other}}
         end
 
         @impl true

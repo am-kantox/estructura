@@ -195,3 +195,14 @@ defmodule Estructura.Coercers.NullableDatetime do
   def coerce(nil), do: {:ok, nil}
   def coerce(value), do: Estructura.Coercers.Datetime.coerce(value)
 end
+
+defmodule Estructura.Coercers.Atom do
+  @moduledoc "Coercer for `:atom`, coercing strings by a call to `String.to_existing_atom/1`"
+
+  @behaviour Estructura.Coercer
+  @impl Estructura.Coercer
+
+  def coerce(value) when is_binary(value), do: {:ok, String.to_existing_atom(value)}
+  def coerce(value) when is_atom(value), do: {:ok, value}
+  def coerce(value), do: {:error, {:unexpected_value, value}}
+end

@@ -177,6 +177,7 @@ end
 ```
 
 ## Changelog
+* `1.8.0` — `validate/1`
 * `1.7.0` — better infrastructure for `Types`, `URI`, `IP`, `Scaffold`
 * `1.6.0` — `jsonify: true | module()` option in a call to `Estructura.Flattenable.flatten/2`
 * `1.5.0` — no `:formulae` dependency

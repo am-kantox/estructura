@@ -94,7 +94,8 @@ defmodule Estructura.MixProject do
       canonical: "http://hexdocs.pm/#{@app}",
       logo: "stuff/#{@app}-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
-      extras: ~w[README.md],
+      extras:
+        ~w[README.md stuff/powerful-nested-structures.md stuff/tests-as-first-class-citizens.md],
       groups_for_modules: [
         # Estructura,
         # Estructura.Nested,

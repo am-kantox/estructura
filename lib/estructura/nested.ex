@@ -275,6 +275,9 @@ defmodule Estructura.Nested do
   @spec reshape(Macro.input(), action(), module()) ::
           {module(), {action(), atom()}, Macro.output()}
           | [{module(), {action(), atom()}, Macro.output()}]
+  def reshape({:__block__, _, defs}, action, module) when is_list(defs),
+    do: reshape(defs, action, module)
+
   def reshape(defs, action, module) when is_list(defs),
     do: Enum.map(defs, &reshape(&1, action, module))
 
@@ -520,13 +523,18 @@ defmodule Estructura.Nested do
   defp stream_data_type_for(const),
     do: {StreamData, :constant, [const]}
 
-  @spec coercer_and_validator(atom(), module()) :: Macro.t()
-  defp coercer_and_validator(field, type) do
+  @spec coercer_impl(atom(), module()) :: Macro.t()
+  defp coercer_impl(field, type) do
     quote generated: true, location: :keep do
       @impl true
       def unquote(:"coerce_#{field}")(value),
         do: unquote(type).coerce(value)
+    end
+  end
 
+  @spec validator_impl(atom(), module()) :: Macro.t()
+  defp validator_impl(field, type) do
+    quote generated: true, location: :keep do
       @impl true
       def unquote(:"validate_#{field}")(value),
         do: unquote(type).validate(value)
@@ -563,16 +571,13 @@ defmodule Estructura.Nested do
               do: name,
               else: Scaffold.create(type, name, opts)
 
-          {[{:coerce, field}, {:validate, field} | funs],
-           [coercer_and_validator(field, type) | defs]}
+          maybe_amend_funs_and_defs(field, type, funs, defs)
 
         {field, {:type, {type, _options}}}, {funs, defs} ->
-          {[{:coerce, field}, {:validate, field} | funs],
-           [coercer_and_validator(field, type) | defs]}
+          maybe_amend_funs_and_defs(field, type, funs, defs)
 
         {field, {:type, type}}, {funs, defs} ->
-          {[{:coerce, field}, {:validate, field} | funs],
-           [coercer_and_validator(field, type) | defs]}
+          maybe_amend_funs_and_defs(field, type, funs, defs)
 
         _, acc ->
           acc
@@ -644,12 +649,47 @@ defmodule Estructura.Nested do
         def cast(content, options) when is_list(content),
           do: content |> Map.new() |> cast(options)
 
+        @doc """
+        Same as `cast/2` but raises on errors.
+        """
         def cast!(content, options \\ []) when is_map(content) or is_list(content) do
           content
           |> cast(options)
           |> case do
             {:ok, cast} -> cast
             {:error, error} -> raise error
+          end
+        end
+
+        @doc """
+        Validates the instance of `#{inspect(__MODULE__)}` with all the defined validators.
+        """
+        @spec validate(t()) :: {:ok, t()} | {:error, keyword()}
+        def validate(%__MODULE__{} = content) do
+          Enum.reduce(unquote(Macro.escape(fields)), [], fn
+            {field, _}, errors ->
+              value = Map.fetch!(content, field)
+
+              result =
+                cond do
+                  function_exported?(__MODULE__, :"validate_#{field}", 1) ->
+                    apply(__MODULE__, :"validate_#{field}", [value])
+
+                  match?(%_{}, value) and function_exported?(value.__struct__, :validate, 1) ->
+                    value.__struct__.validate(value)
+
+                  true ->
+                    {:ok, value}
+                end
+
+              case result do
+                {:ok, _result} -> errors
+                {:error, error} -> [{field, error} | errors]
+              end
+          end)
+          |> case do
+            [] -> {:ok, content}
+            errors -> {:error, errors}
           end
         end
 
@@ -667,6 +707,24 @@ defmodule Estructura.Nested do
           Map.keys(fields)
         )
     ]
+  end
+
+  defp maybe_amend_funs_and_defs(field, type, funs, defs) do
+    {funs, defs} = maybe_add_coercer(field, type, funs, defs)
+    {funs, defs} = maybe_add_validator(field, type, funs, defs)
+    {funs, defs}
+  end
+
+  defp maybe_add_coercer(field, type, funs, defs) do
+    if {:coerce, field} in funs,
+      do: {funs, defs},
+      else: {[{:coerce, field} | funs], [coercer_impl(field, type) | defs]}
+  end
+
+  defp maybe_add_validator(field, type, funs, defs) do
+    if {:validate, field} in funs,
+      do: {funs, defs},
+      else: {[{:validate, field} | funs], [validator_impl(field, type) | defs]}
   end
 
   @doc false

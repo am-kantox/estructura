@@ -339,3 +339,19 @@ defmodule Estructura.Server do
   # end
 end
 
+defmodule Order do
+  @moduledoc false
+  use Estructura.Nested
+
+  shape %{amount: :positive_integer, currency: :string}
+
+  validate do
+    def amount(value) when value > 0, do: {:ok, value}
+    def amount(value), do: {:error, value}
+
+    def currency(value) when value in ~w(USD EUR GBP), do: {:ok, value}
+    def currency(value), do: {:error, value}
+  end
+end
+
+

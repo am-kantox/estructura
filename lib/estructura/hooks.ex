@@ -59,6 +59,12 @@ defmodule Estructura.Hooks do
 
     recalculate_clause =
       quote generated: true, location: :keep do
+        @doc """
+        Recalculates calculated fields for the instance of #{inspect(__MODULE__)}.
+
+        Normally one would not need to call this function explicitly because `Access`
+          implementation would do that.
+        """
         def recalculate_calculated(%__MODULE__{} = data) do
           Estructura.recalculate_calculated(data, @estructura_calculated_fields, __MODULE__)
         end

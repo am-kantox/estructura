@@ -3,6 +3,11 @@ name: Test
 on: [push, pull_request]
 
 jobs:
+  report_mix_deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/mix-dependency-submission@v1
   test:
     runs-on: ubuntu-latest
     env:
@@ -19,7 +24,7 @@ jobs:
               otp: 27
               elixir: 1.18
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-elixir@v1
         with:
           otp-version: ${{matrix.pair.otp}}

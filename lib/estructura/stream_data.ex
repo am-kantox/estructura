@@ -248,4 +248,43 @@ defmodule Estructura.StreamData do
       _ -> StreamData.one_of([ip4(), ip6()])
     end
   end
+
+  @spec uuid(keyword()) :: StreamData.t(Estructura.Nested.Type.UUID.t())
+  @doc """
+  Generates an instance of `Estructura.Nested.Type.UUID.t()`. This generator is unshrinkable.
+
+  **NB** versions `3` and `5` require mandatory `namespace`/`uuid` and `name` options passed.
+  """
+  def uuid(options \\ []) do
+    format = Keyword.get(options, :format, :default)
+
+    fun =
+      case Keyword.get(options, :version, 4) do
+        1 ->
+          clock_seq = Keyword.get(options, :clock_seq)
+          node = Keyword.get(options, :node)
+          if clock_seq || node, do: &UUID.uuid1(clock_seq, node, &1), else: &UUID.uuid1(&1)
+
+        3 ->
+          namespace_or_uuid =
+            Keyword.get_lazy(options, :namespace, fn -> Keyword.get(options, :uuid) end)
+
+          name = Keyword.get(options, :name)
+          &UUID.uuid3(namespace_or_uuid, name, &1)
+
+        4 ->
+          &UUID.uuid4/1
+
+        5 ->
+          namespace_or_uuid =
+            Keyword.get_lazy(options, :namespace, fn -> Keyword.get(options, :uuid, nil) end)
+
+          name = Keyword.get(options, :name)
+          &UUID.uuid5(namespace_or_uuid, name, &1)
+      end
+
+    StreamData.repeatedly(fn ->
+      with {:ok, result} <- Estructura.Nested.Type.UUID.coerce(fun.(format)), do: result
+    end)
+  end
 end

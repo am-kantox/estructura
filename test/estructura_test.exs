@@ -32,50 +32,50 @@ defmodule EstructuraTest do
 
   property "put/3" do
     check all i <- string(?0..?9, min_length: 1) do
-      Full.put!(@full, :foo, i) == %Full{@full | foo: String.to_integer(i)}
+      Full.put!(@full, :foo, i) == %{@full | foo: String.to_integer(i)}
     end
 
     assert_raise Estructura.Error, ~r/42a is not a valid integer value/, fn ->
       Full.put!(@full, :foo, "42a")
     end
 
-    assert_raise KeyError, ~r/key :not_a_field not found in: %Estructura.Full/, fn ->
+    assert_raise KeyError, ~r/key :not_a_field not found in:/, fn ->
       Full.put!(@full, :not_a_field, 42)
     end
   end
 
   property "Access" do
     check all j <- integer(), i <- StreamData.constant(if(j < 0, do: -j, else: j)) do
-      assert put_in(@full, [:foo], i) == %Full{@full | foo: i}
+      assert put_in(@full, [:foo], i) == %{@full | foo: i}
 
-      assert put_in(@full, [:baz, :inner_baz], i) == %Full{
+      assert put_in(@full, [:baz, :inner_baz], i) == %{
                @full
                | baz: %{@full.baz | inner_baz: i}
              }
 
-      assert update_in(@full, [:foo], fn _ -> i end) == %Full{@full | foo: i}
+      assert update_in(@full, [:foo], fn _ -> i end) == %{@full | foo: i}
 
-      assert update_in(@full, [:baz, :inner_baz], fn _ -> i end) == %Full{
+      assert update_in(@full, [:baz, :inner_baz], fn _ -> i end) == %{
                @full
                | baz: %{@full.baz | inner_baz: i}
              }
     end
 
-    assert pop_in(@full, [:foo]) == {42, %Full{@full | foo: nil}}
+    assert pop_in(@full, [:foo]) == {42, %{@full | foo: nil}}
     assert pop_in(@full, [:snafu]) == {nil, @full}
 
     assert_raise UndefinedFunctionError,
                  ~r/Estructura.Void does not implement the Access behaviour/,
                  fn -> pop_in(@void, [:foo]) end
 
-    assert_raise KeyError, ~r/key :not_a_field not found in: %Estructura.Full/, fn ->
+    assert_raise KeyError, ~r/key :not_a_field not found in:/, fn ->
       put_in(@full, [:not_a_field], 42)
     end
   end
 
   property "Coercion" do
     check all i <- string(?0..?9, min_length: 1) do
-      put_in(@full, [:foo], i) == %Full{@full | foo: String.to_integer(i)}
+      put_in(@full, [:foo], i) == %{@full | foo: String.to_integer(i)}
     end
 
     assert_raise Estructura.Error, ~r/42a is not a valid integer value/, fn ->
@@ -96,7 +96,7 @@ defmodule EstructuraTest do
       assert %ECB{into: "abc"} = Enum.into(~w[a b c], %ECB{})
 
       assert_raise Protocol.UndefinedError,
-                   ~r/protocol Collectable not implemented for (?:type |%)Estructura.Void/,
+                   ~r/protocol Collectable not implemented for (?:type |%)?Estructura.Void/,
                    fn -> Enum.into(~w[a], %Void{}) end
     end
   end
@@ -106,7 +106,7 @@ defmodule EstructuraTest do
       assert [^i, ^i, ^i, nil] = Enum.map(%Full{foo: i, bar: i, baz: i}, &elem(&1, 1))
 
       assert_raise Protocol.UndefinedError,
-                   ~r/protocol Enumerable not implemented for (?:type |%)Estructura.Void/,
+                   ~r/protocol Enumerable not implemented for (?:type |%)?Estructura.Void/,
                    fn -> Enum.map(%Void{}, & &1) end
     end
 

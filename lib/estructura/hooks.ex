@@ -76,7 +76,7 @@ defmodule Estructura.Hooks do
           def put(%__MODULE__{unquote(key) => _} = data, unquote(key), value) do
             with {:coercion, {:ok, value}} <- {:coercion, coerce_value(unquote(key), value)},
                  {:validation, {:ok, value}} <- {:validation, validate_value(unquote(key), value)} do
-              {:ok, recalculate_calculated(%__MODULE__{data | unquote(key) => value})}
+              {:ok, recalculate_calculated(%{data | unquote(key) => value})}
             else
               {reason, {:error, error}} -> {:error, {reason, error}}
             end
@@ -368,7 +368,7 @@ defmodule Estructura.Hooks do
               [x | list]
 
             list, :done ->
-              %unquote(module){s | unquote(field) => MapSet.union(old_value, MapSet.new(list))}
+              %{s | unquote(field) => MapSet.union(old_value, MapSet.new(list))}
 
             _, :halt ->
               :ok
@@ -383,7 +383,7 @@ defmodule Estructura.Hooks do
               [x | list]
 
             list, :done ->
-              %unquote(module){s | unquote(field) => old_value ++ list}
+              %{s | unquote(field) => old_value ++ list}
 
             _, :halt ->
               :ok
@@ -398,7 +398,7 @@ defmodule Estructura.Hooks do
               [x | list]
 
             list, :done ->
-              %unquote(module){s | unquote(field) => Map.merge(old_value, Map.new(list))}
+              %{s | unquote(field) => Map.merge(old_value, Map.new(list))}
 
             _, :halt ->
               :ok
@@ -419,10 +419,10 @@ defmodule Estructura.Hooks do
               <<IO.iodata_to_binary(acc)::bitstring, x::bitstring>>
 
             acc, :done when is_bitstring(acc) ->
-              %unquote(module){s | unquote(field) => acc}
+              %{s | unquote(field) => acc}
 
             acc, :done ->
-              %unquote(module){s | unquote(field) => IO.iodata_to_binary(acc)}
+              %{s | unquote(field) => IO.iodata_to_binary(acc)}
 
             __acc, :halt ->
               :ok
@@ -438,7 +438,7 @@ defmodule Estructura.Hooks do
               <<acc::bitstring, x::bitstring>>
 
             acc, :done ->
-              %unquote(module){s | unquote(field) => acc}
+              %{s | unquote(field) => acc}
 
             _acc, :halt ->
               :ok

@@ -116,7 +116,7 @@ defmodule Estructura.Nested.Type.Enum do
           :atom ->
             def coerce(term), do: Estructura.Coercers.Atom.coerce(term)
 
-          atom ->
+          atom when is_atom(atom) ->
             def coerce(term), do: unquote(coercer).coerce(term)
 
           other ->

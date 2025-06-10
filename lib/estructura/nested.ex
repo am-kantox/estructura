@@ -199,7 +199,7 @@ defmodule Estructura.Nested do
     path = [term, parent] |> Enum.map(&Module.split/1) |> trim_left()
     key = path |> Kernel.++([key]) |> Enum.join(".") |> String.downcase()
 
-    squeeze(rest, %KeyError{
+    squeeze(rest, %{
       acc
       | key: [key | keys],
         message: [msg, message] |> Enum.filter(&is_binary/1) |> Enum.join("\n")

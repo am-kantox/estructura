@@ -52,7 +52,7 @@ defmodule Estructura.Lazy do
 
   def apply(%Lazy{} = lazy, %{__lazy_data__: data}, key) do
     if stale?(lazy),
-      do: %Lazy{lazy | timestamp: DateTime.utc_now(), value: apply_getter(lazy.getter, key, data)},
+      do: %{lazy | timestamp: DateTime.utc_now(), value: apply_getter(lazy.getter, key, data)},
       else: lazy
   end
 
@@ -76,7 +76,7 @@ defmodule Estructura.Lazy do
 
   @doc false
   @spec put(t(), value()) :: t()
-  def put(lazy, value), do: %Lazy{lazy | timestamp: DateTime.utc_now(), value: {:ok, value}}
+  def put(%Lazy{} = lazy, value), do: %{lazy | timestamp: DateTime.utc_now(), value: {:ok, value}}
 
   defimpl Inspect do
     @moduledoc false

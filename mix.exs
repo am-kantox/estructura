@@ -19,15 +19,6 @@ defmodule Estructura.MixProject do
       aliases: aliases(),
       docs: docs(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        credo: :ci,
-        dialyzer: :ci,
-        tests: :test,
-        "coveralls.json": :test,
-        "coveralls.html": :test,
-        "hex.publish": :ci,
-        "quality.ci": :ci
-      ],
       releases: [],
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/dialyzer.plt"},
@@ -43,17 +34,31 @@ defmodule Estructura.MixProject do
     [extra_applications: []]
   end
 
+  def cli do
+    [
+      preferred_envs: [
+        credo: :ci,
+        dialyzer: :ci,
+        tests: :test,
+        "coveralls.json": :test,
+        "coveralls.html": :test,
+        "hex.publish": :ci,
+        "quality.ci": :ci
+      ]
+    ]
+  end
+
   defp deps do
     [
       {:stream_data, "~> 1.0"},
-      {:uuid, "~> 1.0"},
+      {:elixir_uuid, "~> 1.2"},
       {:jason, "~> 1.0", optional: true},
       # {:formulae, "~> 0.17", optional: true},
       {:doctest_formatter, "~> 0.2", runtime: false},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test, :ci]},
       {:dialyxir, "~> 1.0", only: [:dev, :test, :ci], runtime: false},
-      {:mneme, "~> 0.6", only: [:dev, :test, :ci]},
+      # {:mneme, "~> 0.6", only: [:dev, :test, :ci]},
       {:ex_doc, "~> 0.11", only: [:dev, :ci]}
     ]
   end

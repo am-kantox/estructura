@@ -286,11 +286,13 @@ defmodule Estructura.Status do
   @moduledoc false
   use Estructura.Nested.Type.Enum, elements: [:online, :offline, :maintenance], coercer: :atom
 end
+Code.ensure_compiled!(Estructura.Status)
 
 defmodule Estructura.Tags do
   @moduledoc false
   use Estructura.Nested.Type.Tags, elements: [:critical, :warning, :info], coercer: :atom
 end
+Code.ensure_compiled!(Estructura.Tags)
 
 defmodule Estructura.Internals do
   @moduledoc false

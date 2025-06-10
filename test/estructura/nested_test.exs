@@ -6,7 +6,6 @@ defmodule Estructura.Nested.Test do
   doctest Estructura.Transformer
 
   alias Estructura.User
-  alias Estructura.User.Data
 
   require Integer
 
@@ -14,7 +13,7 @@ defmodule Estructura.Nested.Test do
 
   property "Access" do
     check all i <- float(min: 0.1) do
-      expected = %User{@user | data: %Data{@user.data | age: i}}
+      expected = %{@user | data: %{@user.data | age: i}}
 
       assert put_in(@user, [:data, :age], i) == expected
       assert update_in(@user, [:data, :age], fn _ -> i end) == expected
@@ -23,14 +22,14 @@ defmodule Estructura.Nested.Test do
 
   property "Coercion" do
     check all i <- positive_integer() do
-      expected = %User{@user | data: %Data{@user.data | age: 1.0 * i}}
+      expected = %{@user | data: %{@user.data | age: 1.0 * i}}
       assert put_in(@user, [:data, :age], i) == expected
     end
 
     check all i <- string(?0..?9, min_length: 1, max_length: 3) do
       i = "1" <> i
 
-      expected = %User{@user | data: %Data{@user.data | age: 1.0 * String.to_integer(i)}}
+      expected = %{@user | data: %{@user.data | age: 1.0 * String.to_integer(i)}}
       assert put_in(@user, [:data, :age], i) == expected
     end
   end

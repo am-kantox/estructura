@@ -59,7 +59,7 @@ defmodule Estructura.Aston do
   def coerce_name(value) do
     case String.Chars.impl_for(value) do
       nil -> {:error, "Cannot coerce value given for `name` field (#{inspect(value)})"}
-      impl -> {:ok, impl.to_string(value)}
+      _impl -> {:ok, to_string(value)}
     end
   end
 

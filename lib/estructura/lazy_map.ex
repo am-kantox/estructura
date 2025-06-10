@@ -49,14 +49,14 @@ defmodule Estructura.LazyMap do
       %Lazy{} = value ->
         case Lazy.apply(value, this, key) do
           %Lazy{value: {:ok, value}} ->
-            {value, %__MODULE__{this | data: Map.delete(data, key)}}
+            {value, %{this | data: Map.delete(data, key)}}
 
           _ ->
             {nil, this}
         end
 
       value ->
-        {value, %__MODULE__{this | data: Map.delete(data, key)}}
+        {value, %{this | data: Map.delete(data, key)}}
     end
   end
 
@@ -75,8 +75,7 @@ defmodule Estructura.LazyMap do
                 pop(this, key)
 
               {current_value, new_value} ->
-                {current_value,
-                 %__MODULE__{this | data: Map.put(data, key, Lazy.put(result, new_value))}}
+                {current_value, %{this | data: Map.put(data, key, Lazy.put(result, new_value))}}
             end
 
           _ ->
@@ -85,7 +84,7 @@ defmodule Estructura.LazyMap do
 
       _ ->
         {value, data} = Map.get_and_update(data, key, fun)
-        {value, %__MODULE__{this | data: data}}
+        {value, %{this | data: data}}
     end
   end
 

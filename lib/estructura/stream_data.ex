@@ -249,6 +249,8 @@ defmodule Estructura.StreamData do
     end
   end
 
+  alias Estructura.Nested.Type.UUID, as: TypeUUID
+
   @spec uuid(keyword()) :: StreamData.t(Estructura.Nested.Type.UUID.t())
   @doc """
   Generates an instance of `Estructura.Nested.Type.UUID.t()`. This generator is unshrinkable.
@@ -284,7 +286,7 @@ defmodule Estructura.StreamData do
       end
 
     StreamData.repeatedly(fn ->
-      with {:ok, result} <- Estructura.Nested.Type.UUID.coerce(fun.(format)), do: result
+      with {:ok, result} <- TypeUUID.coerce(fun.(format)), do: result
     end)
   end
 end

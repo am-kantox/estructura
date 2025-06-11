@@ -124,7 +124,8 @@ defmodule Estructura.MixProject do
           Estructura.Nested.Type.IP,
           Estructura.Nested.Type.String,
           Estructura.Nested.Type.Time,
-          Estructura.Nested.Type.URI
+          Estructura.Nested.Type.URI,
+          Estructura.Nested.Type.UUID
         ],
         Lazy: [
           Estructura.Lazy,

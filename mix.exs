@@ -101,7 +101,7 @@ defmodule Estructura.MixProject do
       logo: "stuff/#{@app}-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
       extras:
-        ~w[README.md stuff/powerful-nested-structures.md stuff/tests-as-first-class-citizens.md],
+        ~w[README.md stuff/powerful-nested-structures.md stuff/tests-as-first-class-citizens.md stuff/estructura.cheatmd],
       groups_for_modules: [
         # Estructura,
         # Estructura.Nested,

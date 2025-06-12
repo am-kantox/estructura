@@ -1,0 +1,136 @@
+# Estructura Cheatsheet
+
+## Setting up structures
+
+### `use Estructura` or `use Estructura.Nested`
+
+#### Basic structure definition
+
+```elixir
+defmodule MyStruct do
+  use Estructura
+  defstruct [:field1, :field2]
+end
+```
+
+#### Nested structure definition with types and validation
+
+```elixir
+defmodule User do
+  use Estructura.Nested
+  
+  defstruct [
+    name: "",
+    address: %{city: "", postal_code: ""}
+  ]
+  
+  def type(:name), do: Estructura.Nested.Type.String
+  def validate(:name, value), do: String.length(value) > 0
+end
+```
+
+## Type System
+
+### Built-in Types
+
+#### Available types for common data structures
+
+```elixir
+Estructura.Nested.Type.DateTime
+Estructura.Nested.Type.Date
+Estructura.Nested.Type.Time
+Estructura.Nested.Type.URI
+Estructura.Nested.Type.IP
+Estructura.Nested.Type.String
+Estructura.Nested.Type.UUID
+```
+
+### Type Scaffolds
+
+#### Enum Types for predefined values
+
+```elixir
+defmodule Status do
+  use Estructura.Nested.Type.Enum,
+    elements: [:pending, :active, :completed]
+end
+```
+
+#### Tag Sets for multiple predefined values
+
+```elixir
+defmodule Categories do
+  use Estructura.Nested.Type.Tags,
+    elements: [:tech, :art, :science]
+end
+```
+
+## Validation and Coercion
+
+### `validate/2`
+
+#### Define validation rules for fields
+
+```elixir
+def validate(:age, value), do: value >= 0
+def validate("address.postal_code", value), do: String.match?(value, ~r/^\d{5}$/)
+```
+
+### `coerce/2`
+
+#### Define coercion rules for data transformation
+
+```elixir
+def coerce(:temperature, str) when is_binary(str) do
+  case Float.parse(str) do
+    {num, ""} -> {:ok, num}
+    _ -> {:error, "Invalid number"}
+  end
+end
+```
+
+## Special Features
+
+### Lazy Values
+
+#### Defer computation until needed
+
+```elixir
+defmodule Cache do
+  use Estructura.Nested
+  defstruct value: Estructura.Lazy.new(&expensive_computation/1)
+end
+```
+
+### Flattening
+
+#### Convert nested structures to flat maps
+
+```elixir
+# Enable flattening
+use Estructura.Nested, flattenable: true
+
+# Usage
+Estructura.Flattenable.flatten(struct)
+# => %{"name" => "value", "address_city" => "London"}
+```
+
+### Property Testing
+
+#### Generate test data automatically
+
+```elixir
+property "valid structures are validated" do
+  check all struct <- MyStruct.__generator__() do
+    assert {:ok, ^struct} = MyStruct.validate(struct)
+  end
+end
+```
+
+## Common Options
+
+- `flattenable: true` - Enable structure flattening
+- `jason: true` - Enable JSON encoding
+- `transformer: true` - Enable transformation capabilities
+
+## Version: 1.9.0

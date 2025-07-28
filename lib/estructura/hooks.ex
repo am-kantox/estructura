@@ -480,7 +480,8 @@ defmodule Estructura.Hooks do
       defp fix_gen({mod, fun}) when is_atom(mod) and is_atom(fun), do: fix_gen({mod, fun, []})
       defp fix_gen(value), do: Macro.escape(value)
 
-      defp args_from_names(names, _opts), do: [Enum.map(names, &{&1, Macro.var(&1, nil)})]
+      defp args_from_names(names, opts),
+        do: [[{:__opts__, opts} | Enum.map(names, &{&1, Macro.var(&1, nil)})]]
 
       # @dialyzer {:nowarn_function, generation_leaf: 1}
       defp generation_leaf(args),
@@ -607,8 +608,8 @@ defmodule Estructura.Hooks do
       end
 
       @doc false
-      def __generator_code__ do
-        Macro.to_string(generation_bound())
+      def __generator_code__(opts \\ []) do
+        Macro.to_string(generation_bound(opts))
       end
 
       defoverridable __generator__: 1

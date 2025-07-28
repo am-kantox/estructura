@@ -24,7 +24,6 @@ defmodule Estructura.Nested.Type.TimeSeries do
           series: [
             value: {:oscillating, average: 1.0, amplitude: 0.3, outliers: 0.4}
           ],
-          partition: {:distinct, [:currency, :counter_currency]},
           timestamp: :timestamp
       end
 
@@ -34,7 +33,6 @@ defmodule Estructura.Nested.Type.TimeSeries do
 
   - `:series` - (required) List of valid values for the time series object
   - `:timestamp` - (optional) the type of timestamp field, allowed: `:mototonic`, `:timestamp`, default `:timestamp` 
-  - `:partition` — (optional) the list of fields to be used for partitioning time series
   - `:coercer` - (optional) Function to coerce input values
   - `:encoder` - (optional) Function to encode values for JSON
 
@@ -45,7 +43,6 @@ defmodule Estructura.Nested.Type.TimeSeries do
           series: [
             value: {:oscillating, average: 1.0, amplitude: 0.3, outliers: 0.4}
           ],
-          partition: {:distinct, [:currency, :counter_currency]},
           timestamp: :timestamp,
           coercer: fn
             %Decimal{} = decimal -> {:ok, Decimal.to_float(decimal)}
@@ -62,7 +59,6 @@ defmodule Estructura.Nested.Type.TimeSeries do
           series: [
             value: {:oscillating, average: 1.0, amplitude: 0.3, outliers: 0.4}
           ],
-          partition: {:distinct, [:currency, :counter_currency]},
           encoder: fn rate, opts -> Jason.Encode.map(Map.from_struct(rate), opts) end
       end
 
@@ -77,8 +73,8 @@ defmodule Estructura.Nested.Type.TimeSeries do
   ### Generation Options
 
   The `generate/1` function accepts:
-  - `:only` - map of partitions to generate for (default: all)
-  - `:except` - map of partitions to exclude from generation
+  - `:only` - values to generate for (default: all)
+  - `:except` - values to exclude from generation
 
   ```elixir
   Rate.generate() |> Enum.take(1)
@@ -158,15 +154,10 @@ defmodule Estructura.Nested.Type.TimeSeries do
       opts = Macro.expand(opts, __CALLER__)
       module = __CALLER__.module
 
-      # series: [
-      #   value: {:oscillating, average: 1.0, amplitude: 0.3, outliers: 0.4}
-      # ],
-      # partition: {:distinct, [:currency, :counter_currency]},
-      {series, partition, timestamp, coercer, encoder} =
+      {series, timestamp, coercer, encoder} =
         if Keyword.keyword?(opts) do
           {
             Keyword.fetch!(opts, :series),
-            Keyword.get(opts, :partition, %{}),
             Keyword.get(opts, :timestamp, :timestamp),
             Keyword.get(opts, :coercer),
             Keyword.get(opts, :encoder)
@@ -180,30 +171,29 @@ defmodule Estructura.Nested.Type.TimeSeries do
           {name, {type, opts}} -> {name, {type, opts}}
           {name, type} when is_atom(type) -> {name, {type, []}}
           {name, opts} when is_list(opts) -> {name, {:oscillating, opts}}
+          {name, opts_fun} when is_function(opts_fun) -> {name, {:oscillating, opts_fun}}
           name when is_atom(name) -> {name, {:oscillating, []}}
         end)
-
-      {kind, map} = with default when is_list(default) <- partition, do: {:distinct, default}
 
       keys = [:timestamp | Keyword.keys(series)]
 
       quote generated: true, location: :keep do
         @moduledoc false
-        @series unquote(series)
-        @timestamp unquote(timestamp)
-        @partition_kind unquote(kind)
-        @partition unquote(map)
-
         defstruct unquote(keys)
 
         defmodule Producer do
           @moduledoc false
           @series unquote(series)
+          @timestamp unquote(timestamp)
 
           def produce(opts \\ [], payload \\ []) do
             series =
-              for {name, {kind, defaults}} <- @series,
-                  do: {name, {kind, Keyword.merge(defaults, Keyword.get(opts, name, []))}}
+              for {name, {kind, defaults}} <- @series do
+                defaults =
+                  with defaults when is_function(defaults, 1) <- defaults, do: defaults.(payload)
+
+                {name, {kind, Keyword.merge(defaults, Keyword.get(opts, name, []))}}
+              end
 
             Stream.unfold(%{series: series}, fn %{series: series} ->
               {results, series} =
@@ -212,9 +202,16 @@ defmodule Estructura.Nested.Type.TimeSeries do
                   {[{name, result} | res], [{name, {kind, config}} | cfg]}
                 end)
 
+              timestamp =
+                case Keyword.get(opts, :timestamp, @timestamp) do
+                  :timestamp -> DateTime.utc_now()
+                  :unix -> DateTime.utc_now() |> DateTime.to_unix()
+                  :string -> DateTime.utc_now() |> DateTime.to_iso8601()
+                end
+
               {Map.new([
                  {:__struct__, unquote(module)},
-                 {:timestamp, DateTime.utc_now()} | results
+                 {:timestamp, timestamp} | results
                ]), %{series: series}}
             end)
           end
@@ -226,12 +223,42 @@ defmodule Estructura.Nested.Type.TimeSeries do
         @behaviour Estructura.Nested.Type
         @impl true
         def generate(opts \\ [], payload \\ []) do
-          {pool, opts} = Keyword.pop(opts, :pool, 100)
+          {payload_opts, payload} = Keyword.pop(payload, :__opts__, [])
+          opts = Keyword.merge(payload_opts, opts)
 
+          {pool, opts} = Keyword.pop(opts, :pool, 100)
+          {naive, opts} = Keyword.pop(opts, :naive, false)
+
+          do_generate({naive, pool}, opts, payload)
+        end
+
+        defp do_generate({true, pool}, opts, payload) do
           opts
           |> produce(payload)
           |> Enum.take(pool)
           |> StreamData.member_of()
+        end
+
+        defp do_generate({false, pool}, opts, payload) do
+          %StreamData{
+            generator: fn rand_seed, _size ->
+              {rand_value, _new_seed} = :rand.uniform_s(1000, rand_seed)
+              seed_offset = div(rand_value, 10)
+
+              stream = produce(opts, payload)
+              root = stream |> Stream.drop(seed_offset) |> Enum.at(0)
+
+              children =
+                stream
+                |> Stream.drop(seed_offset + 1)
+                |> Stream.take(pool)
+                |> Stream.map(fn value ->
+                  %StreamData.LazyTree{root: value, children: []}
+                end)
+
+              %StreamData.LazyTree{root: root, children: children}
+            end
+          }
         end
 
         @impl true
@@ -299,9 +326,18 @@ defmodule Estructura.Nested.Type.TimeSeries do
 
   ## Examples
 
-      defmodule Role do
-        use Estructura.Nested.Type.Enum, elements: [:admin, :user, :guest]
-      end
+  ```elixir
+  defmodule RateType do
+    use Estructura.Nested.Type.TimeSeries,
+      series: [value: {:oscillating, &RateType.rate_config/1}],
+      timestamp: :timestamp
+
+    def rate_config(_currencies) do
+      [average: 1.2, amplitude: 0.3, outliers: 0.2]
+    end
+  end
+  ```
+
   """
   defmacro __using__(opts) do
     quote do

@@ -95,7 +95,7 @@ defmodule Estructura.Nested.Type.IP do
   #   def flatten(%Estructura.Nested.Type.IP{} = ip, _opts), do: to_string(ip)
   # end
 
-  if Code.ensure_loaded?(Jason.Encoder) do
+  if match?({:module, Jason.Encoder}, Code.ensure_compiled(Jason.Encoder)) do
     defimpl Jason.Encoder do
       @moduledoc false
       def encode(%Estructura.Nested.Type.IP{} = ip, _opts) do
@@ -113,7 +113,7 @@ defmodule Estructura.Nested.Type.IP do
   end
 
   @impl true
-  def generate(opts \\ []), do: Estructura.StreamData.ip(opts)
+  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.ip(opts)
 
   @impl true
   def coerce(term) when is_binary(term) do

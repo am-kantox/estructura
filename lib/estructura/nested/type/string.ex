@@ -5,7 +5,7 @@ defmodule Estructura.Nested.Type.String do
   @behaviour Estructura.Nested.Type
 
   @impl true
-  def generate(opts \\ []) do
+  def generate(opts \\ [], _payload \\ []) do
     {kind_or_codepoints, opts} = Keyword.pop(opts, :kind_of_codepoints, :printable)
     StreamData.string(kind_or_codepoints, opts)
   end

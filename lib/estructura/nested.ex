@@ -15,7 +15,10 @@ defmodule Estructura.Nested do
   @typep mfargs :: {module(), atom(), list()}
   @typep simple_type_variants :: atom() | {atom(), any()} | mfargs()
   @typep simple_type :: {:simple, simple_type_variants()}
-  @typep shape :: %{required(atom()) => simple_type() | {:estructura, module()}}
+  @typep estructura_type :: {:estructura, module()}
+  @typep shape ::
+           %{required(atom()) => simple_type() | estructura_type()}
+           | [{atom(), simple_type() | estructura_type()}]
 
   alias Estructura.Nested.Type.Scaffold
 
@@ -325,14 +328,12 @@ defmodule Estructura.Nested do
      ]}
   end
 
-  @spec slice(module(), atom(), map(), map(), %{required(module()) => definitions()}) ::
-          Macro.output() | {atom(), {:estructura, module()}}
-  defp slice(module, name, %{} = fields, values, impls) do
+  defp slice(module, name, fields, values, impls) when is_map(fields) or is_list(fields) do
     impl = Map.get(impls, module, %{funs: [], defs: []})
     values = values || %{}
 
     complex =
-      for {name, %{} = subslice} <- fields, into: %{} do
+      for {name, %{} = subslice} <- fields do
         module
         |> Module.concat(name |> to_string() |> Macro.camelize())
         |> slice(name, subslice, Map.get(values, name, %{}), impls)
@@ -340,13 +341,13 @@ defmodule Estructura.Nested do
 
     all =
       fields
-      |> Enum.reduce(%{}, fn
+      |> Enum.reduce([], fn
         {_, %{}}, acc -> acc
-        {name, [type]}, acc -> Map.put(acc, name, {:list, type})
-        {name, [_ | _] = types}, acc -> Map.put(acc, name, {:mixed, types})
-        {name, type}, acc -> Map.put(acc, name, type(type))
+        {name, [type]}, acc -> Keyword.put(acc, name, {:list, type})
+        {name, [_ | _] = types}, acc -> Keyword.put(acc, name, {:mixed, types})
+        {name, type}, acc -> Keyword.put(acc, name, type(type))
       end)
-      |> Map.merge(complex)
+      |> Keyword.merge(complex)
 
     if is_nil(name) do
       module_ast(module, false, all, values, impl)
@@ -355,6 +356,9 @@ defmodule Estructura.Nested do
       {name, {:estructura, module}}
     end
   end
+
+  @spec known?(type :: atom()) :: boolean()
+  defp known?(type), do: match?({:module, ^type}, Code.ensure_compiled(type))
 
   @spec type(type) :: {:simple | :remote | :type, type} when type: simple_type_variants()
   defp type({simple, _} = type) when simple in @simple_parametrized_types, do: {:simple, type}
@@ -376,7 +380,7 @@ defmodule Estructura.Nested do
         maybe_type = Module.concat([simple])
         maybe_nested_type = Module.concat(@type_module_prefix, Macro.camelize(simple))
 
-        case {Code.ensure_loaded?(maybe_type), Code.ensure_loaded?(maybe_nested_type), type} do
+        case {known?(maybe_type), known?(maybe_nested_type), type} do
           {false, false, _} -> {:simple, type}
           {true, _, {_, opts}} -> {:type, {maybe_type, opts}}
           {true, _, _} -> {:type, maybe_type}
@@ -567,7 +571,7 @@ defmodule Estructura.Nested do
           {name, opts} = get_name_opts(field, type, options)
 
           type =
-            if Code.ensure_loaded?(name),
+            if match?({:module, ^name}, Code.ensure_compiled(name)),
               do: name,
               else: Scaffold.create(type, name, opts)
 
@@ -704,7 +708,7 @@ defmodule Estructura.Nested do
             validation: validations,
             generator: generator
           ),
-          Map.keys(fields)
+          Keyword.keys(fields)
         )
     ]
   end

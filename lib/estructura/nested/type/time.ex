@@ -40,7 +40,7 @@ defmodule Estructura.Nested.Type.Time do
       #Time<...>
   """
   @impl true
-  def generate(opts \\ []), do: Estructura.StreamData.time(opts)
+  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.time(opts)
 
   @doc """
   Attempts to coerce a value into a Time.

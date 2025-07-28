@@ -40,7 +40,7 @@ defmodule Estructura.Nested.Type.Date do
       #Date<2024-...>
   """
   @impl true
-  def generate(opts \\ []), do: Estructura.StreamData.date(opts)
+  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.date(opts)
 
   @doc """
   Attempts to coerce a value into a Date.

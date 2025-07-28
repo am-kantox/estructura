@@ -52,6 +52,7 @@ defmodule Estructura.MixProject do
     [
       {:stream_data, "~> 1.0"},
       {:elixir_uuid, "~> 1.2"},
+      {:lazy_for, "~> 1.0"},
       {:jason, "~> 1.0", optional: true},
       # {:formulae, "~> 0.17", optional: true},
       {:doctest_formatter, "~> 0.2", runtime: false},

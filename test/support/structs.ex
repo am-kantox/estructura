@@ -356,4 +356,30 @@ defmodule Order do
   end
 end
 
+defmodule RateType do
+  @moduledoc false
+  use Estructura.Nested.Type.TimeSeries,
+    series: [
+      value: {:oscillating, average: 1.5, amplitude: 0.1, outliers: 0.1}
+    ],
+    partition: {:distinct, [currency: [:EUR, :USD], counter_currency: [:EUR, :USD]]},
+    timestamp: :timestamp
+end
+Code.ensure_compiled!(RateType)
 
+defmodule Rate do
+  @moduledoc false
+  use Estructura.Nested
+
+  shape [
+    currency: {Estructura.Nested.Type.Enum, ~w|EUR USD|a},
+    counter_currency: {Estructura.Nested.Type.Enum, ~w|GBP CAD|a},
+    rate: RateType
+  ]
+
+        # def __generator__(opts) do
+        #   IO.inspect(opts)
+        #   super(opts)
+        # end
+
+end

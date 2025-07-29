@@ -28,7 +28,7 @@ defmodule Estructura.Nested.Type.UUID do
     end
   end
 
-  if Code.ensure_loaded?(Jason.Encoder) do
+  if match?({:module, Jason.Encoder}, Code.ensure_compiled(Jason.Encoder)) do
     defimpl Jason.Encoder do
       @moduledoc false
       def encode(%Estructura.Nested.Type.UUID{uuid: value}, _opts),
@@ -43,7 +43,7 @@ defmodule Estructura.Nested.Type.UUID do
   end
 
   @impl true
-  def generate(opts \\ []), do: Estructura.StreamData.uuid(opts)
+  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.uuid(opts)
 
   @impl true
   def coerce(%__MODULE__{} = term), do: {:ok, term}

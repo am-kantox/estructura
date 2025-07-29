@@ -356,4 +356,42 @@ defmodule Order do
   end
 end
 
+defmodule RateType do
+  @moduledoc false
+  use Estructura.Nested.Type.TimeSeries,
+    series: [
+      value: {:oscillating, &RateType.rate_config/1}
+    ],
+    timestamp: :timestamp
 
+  def rate_config(currencies) do
+    currency = Keyword.fetch!(currencies, :currency)
+    counter_currency = Keyword.fetch!(currencies, :counter_currency)
+
+    do_rate_config(currency, counter_currency)
+  end
+
+  defp do_rate_config(currency, currency),
+    do: [average: 1.0, amplitude: 0.0, outliers: 0.2]
+
+  defp do_rate_config(_, :USD),
+    do: [average: 1.1, amplitude: 0.1, outliers: 0.0]
+
+  defp do_rate_config(_, :CAD),
+    do: [average: 1.5, amplitude: 0.5, outliers: 0.1]
+
+  defp do_rate_config(_, :GBP),
+    do: [average: 0.9, amplitude: 0.2, outliers: 0.1]
+end
+Code.ensure_compiled!(RateType)
+
+defmodule Rate do
+  @moduledoc false
+  use Estructura.Nested
+
+  shape [
+    currency: {Estructura.Nested.Type.Enum, ~w|EUR USD|a},
+    counter_currency: {Estructura.Nested.Type.Enum, ~w|USD GBP CAD|a},
+    rate: RateType
+  ]
+end

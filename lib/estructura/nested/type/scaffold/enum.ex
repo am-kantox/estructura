@@ -99,7 +99,7 @@ defmodule Estructura.Nested.Type.Enum do
 
         @behaviour Estructura.Nested.Type
         @impl true
-        def generate(opts \\ []) do
+        def generate(opts \\ [], _payload \\ []) do
           only = Keyword.get(opts, :only, @elements)
           except = Keyword.get(opts, :except, [])
           StreamData.member_of(only -- except)
@@ -129,7 +129,8 @@ defmodule Estructura.Nested.Type.Enum do
         def validate(other),
           do: {:error, "Expected #{inspect(other)} to be one of: " <> inspect(@elements)}
 
-        if Code.ensure_loaded?(Jason.Encoder) and is_function(unquote(encoder), 2) do
+        if match?({:module, Jason.Encoder}, Code.ensure_compiled(Jason.Encoder)) and
+             is_function(unquote(encoder), 2) do
           defimpl Jason.Encoder do
             @moduledoc false
             def encode(term, opts), do: unquote(encoder).(term, opts)

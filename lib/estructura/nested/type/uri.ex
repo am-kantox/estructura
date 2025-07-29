@@ -42,7 +42,7 @@ defmodule Estructura.Nested.Type.URI do
   #⇒ %URI{scheme: "ftp", host: "example.com", path: "/"}
   """
   @impl true
-  def generate(opts \\ []), do: Estructura.StreamData.uri(opts)
+  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.uri(opts)
 
   @doc """
   Attempts to coerce a value into a URI.
@@ -90,7 +90,7 @@ defimpl Estructura.Flattenable, for: URI do
   def flatten(%URI{} = uri, _opts), do: to_string(uri)
 end
 
-if Code.ensure_loaded?(Jason.Encoder) do
+if match?({:module, Jason.Encoder}, Code.ensure_compiled(Jason.Encoder)) do
   defimpl Jason.Encoder, for: URI do
     @moduledoc false
     def encode(%URI{} = uri, _opts), do: [?", URI.to_string(uri), ?"]

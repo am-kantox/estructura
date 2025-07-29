@@ -3,6 +3,8 @@ defmodule Estructura.Hooks do
 
   alias Estructura.Config, as: Cfg
 
+  # credo:disable-for-this-file Credo.Check.Refactor.LongQuoteBlocks
+
   @spec access_ast(boolean(), [{Cfg.key(), binary()}], [Cfg.key()]) :: Macro.t()
   defp access_ast(false, _calculated, _fields), do: []
 
@@ -478,6 +480,9 @@ defmodule Estructura.Hooks do
       defp fix_gen({mod, fun}) when is_atom(mod) and is_atom(fun), do: fix_gen({mod, fun, []})
       defp fix_gen(value), do: Macro.escape(value)
 
+      defp args_from_names(names, opts),
+        do: [[{:__opts__, opts} | Enum.map(names, &{&1, Macro.var(&1, nil)})]]
+
       # @dialyzer {:nowarn_function, generation_leaf: 1}
       defp generation_leaf(args),
         do: {{:., [], [StreamData, :constant]}, [], [{:{}, [], args}]}
@@ -486,7 +491,7 @@ defmodule Estructura.Hooks do
         {{:., [], [StreamData, :bind]}, [], [gen, {:fn, [], [{:->, [], [[arg], acc]}]}]}
       end
 
-      defp generation_bound do
+      defp generation_bound(opts \\ []) do
         args =
           Enum.map(unquote(types), fn {arg, gen} ->
             {Macro.var(arg, nil), fix_gen(gen)}
@@ -494,10 +499,30 @@ defmodule Estructura.Hooks do
 
         init_args = Enum.map(args, &elem(&1, 0))
 
-        Enum.reduce(args, generation_leaf(init_args), &generation_clause/2)
+        args
+        |> Enum.reduce(generation_leaf(init_args), &generation_clause/2)
+        |> Macro.postwalk([], fn
+          {var_name, _, nil} = var, acc ->
+            {var, [var_name | acc]}
+
+          {{:., _meta, [_type, generator]} = gen_call, meta, args}, acc
+          when generator in ~w|generate __generator__|a ->
+            args =
+              case {generator, args} do
+                {:generate, []} -> [[]] ++ args_from_names(acc, opts)
+                {_, []} -> args_from_names(acc, opts)
+                {_, [args]} -> [args] ++ args_from_names(acc, opts)
+              end
+
+            {{gen_call, meta, args}, acc}
+
+          other, acc ->
+            {other, acc}
+        end)
+        |> elem(0)
       end
 
-      defmacrop do_generation, do: generation_bound()
+      defmacrop do_generation(opts), do: generation_bound(quote do: unquote(opts))
 
       {usage, declarations} =
         cond do
@@ -546,9 +571,10 @@ defmodule Estructura.Hooks do
           "\n## #{key}\n```elixir\n#{declaration}\n```\n"
         end)
 
-      @doc "See `#{inspect(__MODULE__)}.__generator__/1`"
-      @spec __generator__() :: StreamData.t(%__MODULE__{})
-      def __generator__, do: __generator__(%__MODULE__{})
+      @doc "See `#{inspect(__MODULE__)}.__generator__/2`"
+      def __generator__, do: __generator__(%__MODULE__{}, [])
+      def __generator__(%__MODULE__{} = data), do: __generator__(data, [])
+      def __generator__(opts) when is_list(opts), do: __generator__(%__MODULE__{}, opts)
 
       @doc ~s"""
       Returns the generator to be used in `StreamData`-powered property testing, based
@@ -558,8 +584,7 @@ defmodule Estructura.Hooks do
 
       The argument given would be used as a template to generate new values.
       """
-      @spec __generator__(%__MODULE__{}) :: StreamData.t(%__MODULE__{})
-      def __generator__(%__MODULE__{} = this) do
+      def __generator__(%__MODULE__{} = this, opts) do
         producer =
           if {:cast, 1} in __MODULE__.__info__(:functions) do
             fn content ->
@@ -573,12 +598,18 @@ defmodule Estructura.Hooks do
             &struct!(this, &1)
           end
 
-        do_generation()
+        opts
+        |> do_generation()
         |> StreamData.map(&Tuple.to_list/1)
         |> StreamData.map(&Enum.zip(unquote(fields), &1))
         |> StreamData.map(producer)
         |> StreamData.filter(&(not is_nil(&1)))
         |> StreamData.map(&recalculate_calculated/1)
+      end
+
+      @doc false
+      def __generator_code__(opts \\ []) do
+        Macro.to_string(generation_bound(opts))
       end
 
       defoverridable __generator__: 1

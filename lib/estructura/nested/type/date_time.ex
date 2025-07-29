@@ -37,7 +37,7 @@ defmodule Estructura.Nested.Type.DateTime do
       #DateTime<...>
   """
   @impl true
-  def generate(opts \\ []), do: Estructura.StreamData.datetime(opts)
+  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.datetime(opts)
 
   @doc """
   Attempts to coerce a value into a DateTime.

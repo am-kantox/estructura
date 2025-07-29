@@ -314,7 +314,7 @@ defmodule Estructura do
               f.(acc)
           end
 
-        with true <- Code.ensure_loaded?(module),
+        with {:module, ^module} <- Code.ensure_compiled(module),
              true <- function_exported?(module, :"coerce_#{field}", 1),
              {:ok, coerced} <- apply(module, :"coerce_#{field}", [value]),
              true <- function_exported?(module, :"validate_#{field}", 1),

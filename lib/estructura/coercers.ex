@@ -8,14 +8,30 @@ defmodule Estructura.Coercer do
     defdelegate foo.bar.created_at(value), to: :date
   end
   ```
+
+  Available coercers out of the box:
+
+  - `Estructura.Coercers.Atom`
+  - `Estructura.Coercers.Date`
+  - `Estructura.Coercers.DateTime`
+  - `Estructura.Coercers.Float`
+  - `Estructura.Coercers.Integer`
+  - `Estructura.Coercers.Time`
+  - `Estructura.Coercers.NullableDate`
+  - `Estructura.Coercers.NullableDatetime`
+  - `Estructura.Coercers.NullableFloat`
+  - `Estructura.Coercers.NullableInteger`
+  - `Estructura.Coercers.NullableTime`
   """
+
+  @doc "Coerces the input value to the type handled by a respective coercer"
   @callback coerce(value) :: {:ok, value} | {:error, any()} when value: term()
 end
 
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
 
 defmodule Estructura.Coercers.Integer do
-  @moduledoc "Default coercer for `:integer`, coercing strings and floats by rounding"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -34,7 +50,7 @@ defmodule Estructura.Coercers.Integer do
 end
 
 defmodule Estructura.Coercers.NullableInteger do
-  @moduledoc "Nullable coercer for `:integer`, coercing strings and floats by rounding, allows `nil` value"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -44,7 +60,7 @@ defmodule Estructura.Coercers.NullableInteger do
 end
 
 defmodule Estructura.Coercers.Float do
-  @moduledoc "Default coercer for `:float`, coercing strings and integers by multiplying by `1.0`"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -63,7 +79,7 @@ defmodule Estructura.Coercers.Float do
 end
 
 defmodule Estructura.Coercers.NullableFloat do
-  @moduledoc "Nullable coercer for `:float`, coercing strings and floats by rounding, allows `nil` value"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -73,7 +89,7 @@ defmodule Estructura.Coercers.NullableFloat do
 end
 
 defmodule Estructura.Coercers.Date do
-  @moduledoc "Default coercer for `:date`, coercing strings (_ISO8601_) and integers (_epoch_)"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -100,7 +116,7 @@ defmodule Estructura.Coercers.Date do
 end
 
 defmodule Estructura.Coercers.NullableDate do
-  @moduledoc "Nullable coercer for `:date`, coercing strings and floats by rounding, allows `nil` value"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -110,7 +126,7 @@ defmodule Estructura.Coercers.NullableDate do
 end
 
 defmodule Estructura.Coercers.Time do
-  @moduledoc "Default coercer for `:time`, coercing strings (_ISO8601_) and integers (_epoch_)"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -134,7 +150,7 @@ defmodule Estructura.Coercers.Time do
 end
 
 defmodule Estructura.Coercers.NullableTime do
-  @moduledoc "Nullable coercer for `:time`, coercing strings and floats by rounding, allows `nil` value"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -145,7 +161,7 @@ end
 
 defmodule Estructura.Coercers.Datetime do
   @moduledoc deprecated: "Use `Estructura.Coercers.DateTime` instead"
-  @moduledoc "Default coercer for `:datetime`, coercing strings (_ISO8601_) and integers (_epoch_)"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -166,7 +182,7 @@ defmodule Estructura.Coercers.Datetime do
 end
 
 defmodule Estructura.Coercers.DateTime do
-  @moduledoc "Default coercer for `:datetime`, coercing strings (_ISO8601_) and integers (_epoch_)"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -187,7 +203,7 @@ defmodule Estructura.Coercers.DateTime do
 end
 
 defmodule Estructura.Coercers.NullableDatetime do
-  @moduledoc "Nullable coercer for `:datetime`, coercing strings and floats by rounding, allows `nil` value"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer
@@ -197,7 +213,7 @@ defmodule Estructura.Coercers.NullableDatetime do
 end
 
 defmodule Estructura.Coercers.Atom do
-  @moduledoc "Coercer for `:atom`, coercing strings by a call to `String.to_existing_atom/1`"
+  @moduledoc false
 
   @behaviour Estructura.Coercer
   @impl Estructura.Coercer

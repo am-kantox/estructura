@@ -365,13 +365,13 @@ defmodule RateType do
     timestamp: :timestamp
 
   def rate_config(currencies) do
-    currency = Keyword.fetch!(currencies, :currency)
-    counter_currency = Keyword.fetch!(currencies, :counter_currency)
+    currency = Keyword.get(currencies, :currency)
+    counter_currency = Keyword.get(currencies, :counter_currency)
 
     do_rate_config(currency, counter_currency)
   end
 
-  defp do_rate_config(currency, currency),
+  defp do_rate_config(currency, currency) when not is_nil(currency),
     do: [average: 1.0, amplitude: 0.0, outliers: 0.2]
 
   defp do_rate_config(_, :USD),
@@ -382,6 +382,9 @@ defmodule RateType do
 
   defp do_rate_config(_, :GBP),
     do: [average: 0.9, amplitude: 0.2, outliers: 0.1]
+
+  defp do_rate_config(_, _),
+    do: [average: 1.2, amplitude: 0.2, outliers: 0.1]
 end
 Code.ensure_compiled!(RateType)
 

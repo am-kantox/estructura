@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.10.0"
+  @version "1.10.1"
 
   def project do
     [
@@ -105,18 +105,16 @@ defmodule Estructura.MixProject do
         ~w[README.md stuff/powerful-nested-structures.md stuff/tests-as-first-class-citizens.md stuff/estructura.cheatmd],
       groups_for_modules: [
         # Estructura,
-        # Estructura.Nested,
         # Estructura.Aston,
-        Protocols: [
-          Estructura.Flattenable,
-          Estructura.Transformer
-        ],
+        # Estructura.Coercer,
+        # Estructura.Nested,
         Generators: [
           Estructura.StreamData
         ],
         "Type Scaffolds": [
           Estructura.Nested.Type.Enum,
-          Estructura.Nested.Type.Tags
+          Estructura.Nested.Type.Tags,
+          Estructura.Nested.Type.TimeSeries
         ],
         Types: [
           Estructura.Nested.Type,
@@ -132,20 +130,9 @@ defmodule Estructura.MixProject do
           Estructura.Lazy,
           Estructura.LazyMap
         ],
-        Coercers: [
-          Estructura.Coercer,
-          Estructura.Coercers.Atom,
-          Estructura.Coercers.Date,
-          Estructura.Coercers.Datetime,
-          Estructura.Coercers.DateTime,
-          Estructura.Coercers.Integer,
-          Estructura.Coercers.Float,
-          Estructura.Coercers.Time,
-          Estructura.Coercers.NullableDate,
-          Estructura.Coercers.NullableDatetime,
-          Estructura.Coercers.NullableFloat,
-          Estructura.Coercers.NullableInteger,
-          Estructura.Coercers.NullableTime
+        Protocols: [
+          Estructura.Flattenable,
+          Estructura.Transformer
         ],
         Internals: [
           Estructura.Config

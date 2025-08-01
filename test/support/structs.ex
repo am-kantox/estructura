@@ -361,7 +361,7 @@ defmodule ListOfMaps do
 
   use Estructura.Nested
 
-  shape %{map: %{map_in_map: :string}, list: [%{map_in_list: :string}]}
+  shape %{map_value: %{map_in_map: :string}, list_value: [%{map_in_list: :string}]}
 end
 
 defmodule RateType do

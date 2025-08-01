@@ -146,7 +146,8 @@ defmodule Estructura.Nested.Test do
                 term: Estructura.User
               }} = User.cast(raw_user_ko)
 
-      assert Enum.sort(key) == ["address.ciudad", "address.street.casa", "address.street.nombre"]
+      assert Enum.sort(key) ==
+               ~w[:address."ciudad" :address.:street."casa" :address.:street."nombre"]
     end
   end
 
@@ -185,7 +186,7 @@ defmodule Estructura.Nested.Test do
                 term: Estructura.User
               }} = User.cast(raw_user_ko, split: true)
 
-      assert Enum.sort(key) == ["address_street_casa", "address_street_nombre", "addresscity"]
+      assert Enum.sort(key) == ~w["address_street_casa" "address_street_nombre" "addresscity"]
     end
   end
 
@@ -240,16 +241,16 @@ defmodule Estructura.Nested.Test do
   test "list of maps" do
     assert {:ok,
             %ListOfMaps{
-              list: [
-                %ListOfMaps.List{map_in_list: "s2"},
-                %ListOfMaps.List{map_in_list: "s3"},
-                %ListOfMaps.List{map_in_list: "s4"}
+              list_value: [
+                %ListOfMaps.ListValue{map_in_list: "s2"},
+                %ListOfMaps.ListValue{map_in_list: "s3"},
+                %ListOfMaps.ListValue{map_in_list: "s4"}
               ],
-              map: %ListOfMaps.Map{map_in_map: "s1"}
+              map_value: %ListOfMaps.MapValue{map_in_map: "s1"}
             }} =
              ListOfMaps.cast(%{
-               map: %{map_in_map: :s1},
-               list: [%{map_in_list: :s2}, %{map_in_list: :s3}, %{map_in_list: :s4}]
+               map_value: %{map_in_map: :s1},
+               list_value: [%{map_in_list: :s2}, %{map_in_list: :s3}, %{map_in_list: :s4}]
              })
   end
 end

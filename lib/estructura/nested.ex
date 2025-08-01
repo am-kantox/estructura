@@ -273,7 +273,7 @@ defmodule Estructura.Nested do
             {into, path, errors}
 
           {false, into} ->
-            key = [key | path] |> Enum.reverse() |> Enum.join(".")
+            key = [key | path] |> Enum.reverse() |> Enum.map_join(".", &inspect/1)
 
             {into, path,
              [
@@ -364,7 +364,7 @@ defmodule Estructura.Nested do
         module
         |> Module.concat(name |> to_string() |> Macro.camelize())
         |> slice(name, subslice, Map.get(values, name, %{}), impls)
-        |> then(&{:list, &1})
+        |> then(fn {name, type} -> {name, {:list, type}} end)
       end
 
     all =

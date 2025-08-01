@@ -236,4 +236,20 @@ defmodule Estructura.Nested.Test do
       assert ^raw_user_flatten = Estructura.Flattenable.flatten(user)
     end
   end
+
+  test "list of maps" do
+    assert {:ok,
+            %ListOfMaps{
+              list: [
+                %ListOfMaps.List{map_in_list: "s2"},
+                %ListOfMaps.List{map_in_list: "s3"},
+                %ListOfMaps.List{map_in_list: "s4"}
+              ],
+              map: %ListOfMaps.Map{map_in_map: "s1"}
+            }} =
+             ListOfMaps.cast(%{
+               map: %{map_in_map: :s1},
+               list: [%{map_in_list: :s2}, %{map_in_list: :s3}, %{map_in_list: :s4}]
+             })
+  end
 end

@@ -356,6 +356,14 @@ defmodule Order do
   end
 end
 
+defmodule ListOfMaps do
+  @moduledoc false
+
+  use Estructura.Nested
+
+  shape %{map: %{map_in_map: :string}, list: [%{map_in_list: :string}]}
+end
+
 defmodule RateType do
   @moduledoc false
   use Estructura.Nested.Type.TimeSeries,

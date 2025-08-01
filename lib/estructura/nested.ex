@@ -222,6 +222,25 @@ defmodule Estructura.Nested do
 
         {into, path, errors}
 
+      {key, [%{} = map | _] = value}, {into, path, errors} when not is_struct(map) ->
+        deep_path = [atomize(key) | path]
+        reversed_deep_path = Enum.reverse(deep_path)
+
+        {into, errors} =
+          Enum.reduce(value, {into, errors}, fn
+            %{} = map, {into, errors} ->
+              into =
+                update_in(into, reversed_deep_path, &[hd(&1) | &1])
+
+              {into, _, errors} =
+                do_from_map({into, [Access.at(0) | deep_path], errors}, map, options)
+
+              {into, errors}
+          end)
+
+        into = update_in(into, reversed_deep_path, &(&1 |> Enum.reverse() |> tl()))
+        {into, path, errors}
+
       {key, value}, {into, path, errors} ->
         key = to_string(key)
 
@@ -241,6 +260,7 @@ defmodule Estructura.Nested do
         Enum.reduce_while(key_paths, {false, into}, fn key_path, {false, into} ->
           try do
             key_path = reversed_path ++ atomize(key_path)
+
             {:halt, {true, put_in(into, key_path, value)}}
           rescue
             # `ArgumentError` is “no existing atom,” meaning no `key` with this name
@@ -332,22 +352,32 @@ defmodule Estructura.Nested do
     impl = Map.get(impls, module, %{funs: [], defs: []})
     values = values || %{}
 
-    complex =
+    complex_maps =
       for {name, %{} = subslice} <- fields do
         module
         |> Module.concat(name |> to_string() |> Macro.camelize())
         |> slice(name, subslice, Map.get(values, name, %{}), impls)
       end
 
+    complex_lists =
+      for {name, [%{} = subslice]} <- fields do
+        module
+        |> Module.concat(name |> to_string() |> Macro.camelize())
+        |> slice(name, subslice, Map.get(values, name, %{}), impls)
+        |> then(&{:list, &1})
+      end
+
     all =
       fields
       |> Enum.reduce([], fn
         {_, %{}}, acc -> acc
+        {_, [%{}]}, acc -> acc
         {name, [type]}, acc -> Keyword.put(acc, name, {:list, type})
         {name, [_ | _] = types}, acc -> Keyword.put(acc, name, {:mixed, types})
         {name, type}, acc -> Keyword.put(acc, name, type(type))
       end)
-      |> Keyword.merge(complex)
+      |> Keyword.merge(complex_maps)
+      |> Keyword.merge(complex_lists)
 
     if is_nil(name) do
       module_ast(module, false, all, values, impl)
@@ -408,13 +438,27 @@ defmodule Estructura.Nested do
 
     fields
     |> Enum.map(fn
-      {name, {:list, _type}} -> {name, Map.get(values, name, [])}
-      {name, {:mixed, _types}} -> {name, Map.get(values, name, [])}
-      {name, {:simple, _type}} -> {name, Map.get(values, name, nil)}
+      {name, {:list, {:estructura, module}}} ->
+        {name, [struct!(module, Map.get(values, name, %{}))]}
+
+      {name, {:list, _type}} ->
+        {name, Map.get(values, name, [])}
+
+      {name, {:mixed, _types}} ->
+        {name, Map.get(values, name, [])}
+
+      {name, {:simple, _type}} ->
+        {name, Map.get(values, name, nil)}
+
       # [TODO] [AM]
-      {name, {:remote, _type}} -> {name, Map.get(values, name, nil)}
-      {name, {:type, _type}} -> {name, Map.get(values, name, nil)}
-      {name, {:estructura, module}} -> {name, struct!(module, Map.get(values, name, %{}))}
+      {name, {:remote, _type}} ->
+        {name, Map.get(values, name, nil)}
+
+      {name, {:type, _type}} ->
+        {name, Map.get(values, name, nil)}
+
+      {name, {:estructura, module}} ->
+        {name, struct!(module, Map.get(values, name, %{}))}
     end)
     |> Estructura.recalculate_calculated(calculated, module)
   end
@@ -461,6 +505,9 @@ defmodule Estructura.Nested do
   @spec generator_ast(shape() | [{:unknown, simple_type()}]) :: [{atom(), mfargs()}]
   defp generator_ast(fields) do
     Enum.map(fields, fn
+      {name, {:list, {:estructura, module}}} ->
+        {name, {StreamData, :list_of, [{module, :__generator__, []}]}}
+
       {name, {:list, type}} ->
         {name, stream_data_type_for([type])}
 

@@ -407,46 +407,48 @@ defmodule Rate do
   ]
 end
 
-defmodule Price do
-  @moduledoc false
+if Mix.env() in [:test, :dev] do
+  defmodule Price do
+    @moduledoc false
 
-  use Estructura.Nested.Type.Struct,
-    origin: Money,
-    coercer: &Price.do_coerce/1,
-    generator: &Price.generator/2
+    use Estructura.Nested.Type.Struct,
+      origin: Money,
+      coercer: &Price.do_coerce/1,
+      generator: &Price.generator/2
 
-    def do_coerce(%Money{} = price), do: {:ok, price}
-    def do_coerce({amount, currency}) do
-      with %Money{} = price <- Money.new(amount, currency), do: {:ok, price}
-    end
-    def do_coerce(other), do: {:error, "Cannot coerce #{inspect(other)} to price"}
+      def do_coerce(%Money{} = price), do: {:ok, price}
+      def do_coerce({amount, currency}) do
+        with %Money{} = price <- Money.new(amount, currency), do: {:ok, price}
+      end
+      def do_coerce(other), do: {:error, "Cannot coerce #{inspect(other)} to price"}
 
-    def generator(opts \\ [], payload \\ []) do
-      opts = payload |> Keyword.get(:__opts__, []) |> Keyword.merge(payload) |> Keyword.merge(opts)
-      currencies =   Keyword.get(opts, :currencies, ~w|USD EUR CAD AUD|a)
-      amount_min = [min: opts |> Keyword.get(:min, 0.0) |> min(0.0)]
-      amount_max =
-        opts |> Keyword.get(:max) |> case do 
-          nil -> []
-          value_max -> [max: max(value_max, amount_min)]
-        end
-  
-      StreamData.bind(StreamData.float(amount_min ++ amount_max), fn amount ->
-        StreamData.bind(StreamData.member_of(currencies), fn currency ->
-          StreamData.constant(amount |> Float.to_string() |> Money.new!(currency))
+      def generator(opts \\ [], payload \\ []) do
+        opts = payload |> Keyword.get(:__opts__, []) |> Keyword.merge(payload) |> Keyword.merge(opts)
+        currencies =   Keyword.get(opts, :currencies, ~w|USD EUR CAD AUD|a)
+        amount_min = [min: opts |> Keyword.get(:min, 0.0) |> min(0.0)]
+        amount_max =
+          opts |> Keyword.get(:max) |> case do 
+            nil -> []
+            value_max -> [max: max(value_max, amount_min)]
+          end
+    
+        StreamData.bind(StreamData.float(amount_min ++ amount_max), fn amount ->
+          StreamData.bind(StreamData.member_of(currencies), fn currency ->
+            StreamData.constant(amount |> Float.to_string() |> Money.new!(currency))
+          end)
         end)
-      end)
-    end
-end
+      end
+  end
 
-defmodule Good do
-  @moduledoc false
+  defmodule Good do
+    @moduledoc false
 
-  use Estructura.Nested
+    use Estructura.Nested
 
-  shape [
-    name: :string,
-    price: {Estructura.Nested.Type.Struct, [origin: Money, generator: &Price.generator/2]}
-    # price: Price
-  ]
+    shape [
+      name: :string,
+      price: {Estructura.Nested.Type.Struct, [origin: Money, generator: &Price.generator/2]}
+      # price: Price
+    ]
+  end
 end

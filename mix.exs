@@ -55,7 +55,7 @@ defmodule Estructura.MixProject do
       {:lazy_for, "~> 1.0"},
       {:jason, "~> 1.0", optional: true},
       # tests
-      {:ex_money, "~> 5.0", only: [:dev, :test, :ci]},
+      {:ex_money, "~> 5.0", only: [:test, :dev]},
       # {:formulae, "~> 0.17", optional: true},
       {:doctest_formatter, "~> 0.2", runtime: false},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},

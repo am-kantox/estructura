@@ -7,7 +7,7 @@ defmodule Estructura.Nested do
   @actions ~w|coerce validate generate|a
   @type_module_prefix "Elixir.Estructura.Nested.Type"
   @simple_parametrized_types ~w|integer float constant|a
-  @metas [Estructura.Nested.Type.Enum, Estructura.Nested.Type.Tags]
+  @metas [Estructura.Nested.Type.Enum, Estructura.Nested.Type.Tags, Estructura.Nested.Type.Struct]
 
   @typep action :: :coerce | :validate | :generate
   @typep functions :: [{:coerce, atom()} | {:validate, atom()} | {:generate, atom()}]
@@ -353,14 +353,14 @@ defmodule Estructura.Nested do
     values = values || %{}
 
     complex_maps =
-      for {name, %{} = subslice} <- fields do
+      for {name, %{} = subslice} when not is_struct(subslice) <- fields do
         module
         |> Module.concat(name |> to_string() |> Macro.camelize())
         |> slice(name, subslice, Map.get(values, name, %{}), impls)
       end
 
     complex_lists =
-      for {name, [%{} = subslice]} <- fields do
+      for {name, [%{} = subslice]} when not is_struct(subslice) <- fields do
         module
         |> Module.concat(name |> to_string() |> Macro.camelize())
         |> slice(name, subslice, Map.get(values, name, %{}), impls)

@@ -238,6 +238,14 @@ defmodule Estructura.Nested.Test do
     end
   end
 
+  property "Struct" do
+    check all %Good{name: _, price: price} <- Good.__generator__() do
+      assert is_struct(price, Money)
+      assert price.currency in ~w|EUR USD AUD CAD|a
+      assert Decimal.gte?(price.amount, 0)
+    end
+  end
+
   test "list of maps" do
     assert {:ok,
             %ListOfMaps{

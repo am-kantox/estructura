@@ -461,7 +461,13 @@ defmodule Estructura.Hooks do
     quote generated: true, location: :keep do
       module = __MODULE__
 
-      defp fix_gen(many) when is_list(many), do: Enum.map(many, &fix_gen/1)
+      defp fix_gen(many) when is_list(many) do
+        if Keyword.keyword?(many) do
+          Enum.map(many, fn {k, v} -> {k, fix_gen(v)} end)
+        else
+          Enum.map(many, &fix_gen/1)
+        end
+      end
 
       defp fix_gen(capture) when is_function(capture, 0),
         do: with(info <- Function.info(capture), do: fix_gen({info[:module], info[:name]}))

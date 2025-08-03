@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.10.2"
+  @version "1.11.0"
 
   def project do
     [
@@ -54,6 +54,8 @@ defmodule Estructura.MixProject do
       {:elixir_uuid, "~> 1.2"},
       {:lazy_for, "~> 1.0"},
       {:jason, "~> 1.0", optional: true},
+      # tests
+      {:ex_money, "~> 5.0", only: [:dev, :test, :ci]},
       # {:formulae, "~> 0.17", optional: true},
       {:doctest_formatter, "~> 0.2", runtime: false},
       {:excoveralls, "~> 0.14", only: [:test, :ci], runtime: false},
@@ -113,6 +115,7 @@ defmodule Estructura.MixProject do
         ],
         "Type Scaffolds": [
           Estructura.Nested.Type.Enum,
+          Estructura.Nested.Type.Struct,
           Estructura.Nested.Type.Tags,
           Estructura.Nested.Type.TimeSeries
         ],

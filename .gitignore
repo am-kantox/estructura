@@ -31,3 +31,4 @@ estructura-*.tar
 .tool-versions
 
 /.erl.history/
+/examples/with_formulae/.erl.history/

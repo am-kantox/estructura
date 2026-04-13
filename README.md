@@ -107,6 +107,50 @@ iex> Categories.validate([:invalid])
 {:error, "All tags are expected to be one of [:tech, :art, :science]..."}
 ```
 
+### JSON Schema Support
+
+`Estructura.Nested` can derive nested structures directly from [JSON Schema](https://json-schema.org/) definitions using the `json_schema/1` macro:
+
+```elixir
+defmodule ApiResponse do
+  use Estructura.Nested
+
+  json_schema %{
+    "type" => "object",
+    "properties" => %{
+      "id" => %{"type" => "integer", "minimum" => 1},
+      "name" => %{"type" => "string", "default" => "anonymous"},
+      "created_at" => %{"type" => "string", "format" => "date-time"},
+      "address" => %{
+        "type" => "object",
+        "properties" => %{
+          "city" => %{"type" => "string"},
+          "zip" => %{"type" => "string"}
+        }
+      },
+      "tags" => %{"type" => "array", "items" => %{"type" => "string"}},
+      "status" => %{"type" => "string", "enum" => ["active", "inactive"]}
+    },
+    "required" => ["id", "name"]
+  }
+end
+
+iex> ApiResponse.cast(%{id: 1, name: "Alice", address: %{city: "Barcelona", zip: "08001"}})
+{:ok, %ApiResponse{id: 1, name: "Alice", address: %ApiResponse.Address{city: "Barcelona", zip: "08001"}, ...}}
+```
+
+You can also load a schema from a file:
+
+```elixir
+json_schema File.read!("priv/schemas/response.json")
+```
+
+JSON Schema types and formats are automatically mapped to Estructura types
+(e.g. `"date-time"` -> `:datetime`, `"uri"` -> `Estructura.Nested.Type.URI`,
+`"enum"` -> `Estructura.Nested.Type.Enum`). Features include `$ref` resolution,
+`allOf` merging, nullable types, and `default` value extraction.
+See `Estructura.Nested.JsonSchema` for the full type mapping reference.
+
 ### Coercion and Validation
 
 Estructura provides flexible coercion and validation:
@@ -177,7 +221,8 @@ end
 ```
 
 ## Changelog
-* `1.10.0` — `TimeSeries` type, propagate already set values as payload to `StreamData.bind/2`
+* `1.11.0` -- `json_schema/1` macro to derive `Estructura.Nested` from JSON Schema definitions
+* `1.10.0` -- `TimeSeries` type, propagate already set values as payload to `StreamData.bind/2`
 * `1.8.0` — `validate/1`
 * `1.7.0` — better infrastructure for `Types`, `URI`, `IP`, `Scaffold`
 * `1.6.0` — `jsonify: true | module()` option in a call to `Estructura.Flattenable.flatten/2`

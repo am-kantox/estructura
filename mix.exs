@@ -119,6 +119,9 @@ defmodule Estructura.MixProject do
           Estructura.Nested.Type.Tags,
           Estructura.Nested.Type.TimeSeries
         ],
+        "JSON Schema": [
+          Estructura.Nested.JsonSchema
+        ],
         Types: [
           Estructura.Nested.Type,
           Estructura.Nested.Type.Date,

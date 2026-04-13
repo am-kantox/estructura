@@ -20,7 +20,7 @@ defmodule Estructura.Nested do
            %{required(atom()) => simple_type() | estructura_type()}
            | [{atom(), simple_type() | estructura_type()}]
 
-  alias Estructura.Nested.Type.Scaffold
+  alias Estructura.Nested.{JsonSchema, Type.Scaffold}
 
   @doc false
   defmacro __using__(opts \\ []) do
@@ -80,6 +80,67 @@ defmodule Estructura.Nested do
     quote generated: true, location: :keep, bind_quoted: [opts: opts] do
       nested = Module.get_attribute(__MODULE__, :__estructura_nested__)
       Module.put_attribute(__MODULE__, :__estructura_nested__, Map.put(nested, :shape, opts))
+    end
+  end
+
+  @doc """
+  Declares the shape of the target nested map from a
+  [JSON Schema](https://json-schema.org/) definition.
+
+  Accepts either a decoded JSON Schema map (with string keys) or a raw JSON
+  binary string. The schema is converted to an `Estructura.Nested` shape at
+  compile time using `Estructura.Nested.JsonSchema.to_shape/1`.
+
+  Any `"default"` values found in the schema are automatically used as
+  initial values (equivalent to calling `init/1`).
+
+  See `Estructura.Nested.JsonSchema` for the full type mapping reference.
+
+  ## Example
+
+  ```elixir
+  defmodule MyApi.Response do
+    use Estructura.Nested
+
+    json_schema %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "integer"},
+        "name" => %{"type" => "string", "default" => "anonymous"},
+        "address" => %{
+          "type" => "object",
+          "properties" => %{
+            "city" => %{"type" => "string"},
+            "zip" => %{"type" => "string"}
+          }
+        },
+        "tags" => %{"type" => "array", "items" => %{"type" => "string"}},
+        "status" => %{"type" => "string", "enum" => ["active", "inactive"]}
+      },
+      "required" => ["id", "name"]
+    }
+  end
+  ```
+
+  You can also load from a file:
+
+  ```elixir
+  json_schema File.read!("priv/schemas/response.json")
+  ```
+  """
+  defmacro json_schema(schema) do
+    quote generated: true, location: :keep, bind_quoted: [schema: schema] do
+      {shape, init, _meta} = JsonSchema.to_shape!(schema)
+
+      nested = Module.get_attribute(__MODULE__, :__estructura_nested__)
+      nested = Map.put(nested, :shape, shape)
+
+      nested =
+        if map_size(init) > 0,
+          do: Map.put(nested, :values, init),
+          else: nested
+
+      Module.put_attribute(__MODULE__, :__estructura_nested__, nested)
     end
   end
 

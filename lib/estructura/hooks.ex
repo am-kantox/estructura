@@ -159,6 +159,7 @@ defmodule Estructura.Hooks do
                 ) do
               case Lazy.apply(value, data) do
                 %Lazy{value: {:ok, value}} = result ->
+                  # credo:disable-for-lines:7
                   case fun.(value) do
                     :pop ->
                       {value, result}

@@ -407,6 +407,85 @@ defmodule Rate do
   ]
 end
 
+defmodule Estructura.JsonSchemaFlat do
+  @moduledoc false
+  use Estructura.Nested
+
+  json_schema %{
+    "type" => "object",
+    "properties" => %{
+      "name" => %{"type" => "string", "default" => "anonymous"},
+      "age" => %{"type" => "integer"},
+      "score" => %{"type" => "number"}
+    }
+  }
+end
+
+defmodule Estructura.JsonSchemaNested do
+  @moduledoc false
+  use Estructura.Nested
+
+  json_schema %{
+    "type" => "object",
+    "properties" => %{
+      "id" => %{"type" => "integer", "minimum" => 1},
+      "name" => %{"type" => "string"},
+      "created_at" => %{"type" => "string", "format" => "date-time"},
+      "birthday" => %{"type" => "string", "format" => "date"},
+      "homepage" => %{"type" => "string", "format" => "uri"},
+      "address" => %{
+        "type" => "object",
+        "properties" => %{
+          "city" => %{"type" => "string"},
+          "street" => %{
+            "type" => "object",
+            "properties" => %{
+              "name" => %{"type" => "string"},
+              "house" => %{"type" => "integer", "minimum" => 1}
+            }
+          }
+        }
+      },
+      "tags" => %{"type" => "array", "items" => %{"type" => "string"}},
+      "status" => %{"type" => "string", "enum" => ["active", "inactive", "banned"]},
+      "scores" => %{
+        "type" => "array",
+        "items" => %{
+          "type" => "object",
+          "properties" => %{
+            "subject" => %{"type" => "string"},
+            "value" => %{"type" => "number"}
+          }
+        }
+      }
+    },
+    "required" => ["id", "name"]
+  }
+end
+
+defmodule Estructura.JsonSchemaRef do
+  @moduledoc false
+  use Estructura.Nested
+
+  json_schema %{
+    "type" => "object",
+    "$defs" => %{
+      "address" => %{
+        "type" => "object",
+        "properties" => %{
+          "city" => %{"type" => "string"},
+          "zip" => %{"type" => "string"}
+        }
+      }
+    },
+    "properties" => %{
+      "name" => %{"type" => "string"},
+      "home_address" => %{"$ref" => "#/$defs/address"},
+      "work_address" => %{"$ref" => "#/$defs/address"}
+    }
+  }
+end
+
 if Mix.env() in [:test, :dev] do
   defmodule Price do
     @moduledoc false

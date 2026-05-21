@@ -352,7 +352,7 @@ defmodule Estructura.Nested do
   @doc false
   @spec normalize(Macro.input()) :: Macro.input()
   def normalize(do: block), do: normalize(block)
-  def normalize({:__block__, [], clauses}), do: clauses
+  def normalize({:__block__, _, clauses}), do: clauses
   def normalize(clauses), do: List.wrap(clauses)
 
   @doc false

@@ -34,14 +34,19 @@ defprotocol Estructura.Flattenable do
     `@derive {Estructura.Flattenable, options}`. `Estructura` implementations derive it be default.
   """
 
+  @spec flatten(t()) :: term()
+  def flatten(input)
+
   @spec flatten(t(), keyword()) :: term()
-  def flatten(input, options \\ [])
+  def flatten(input, options)
 end
 
 defimpl Estructura.Flattenable, for: Any do
   defmacro __deriving__(module, _struct, options) do
     quote do
       defimpl Estructura.Flattenable, for: unquote(module) do
+        def flatten(input), do: flatten(input, [])
+
         def flatten(input, options) do
           options =
             unquote(options)
@@ -57,10 +62,13 @@ defimpl Estructura.Flattenable, for: Any do
     end
   end
 
+  def flatten(input), do: flatten(input, [])
   def flatten(input, _options), do: input
 end
 
 defimpl Estructura.Flattenable, for: List do
+  def flatten(enum), do: flatten(enum, [])
+
   def flatten(enum, options) do
     enum
     |> Keyword.keyword?()
@@ -81,6 +89,8 @@ defimpl Estructura.Flattenable, for: Map do
     (only == [] or key in only or Enum.any?(only, &String.starts_with?(key, &1 <> coupler))) and
       not (key in except or Enum.any?(except, &String.starts_with?(key, &1 <> coupler)))
   end
+
+  def flatten(map), do: flatten(map, [])
 
   def flatten(map, options) do
     coupler = Keyword.get(options, :coupler, "_")
@@ -123,10 +133,16 @@ defimpl Estructura.Flattenable, for: Map do
   defp handle_jsonify(nil, v), do: v
   defp handle_jsonify(false, v), do: v
   defp handle_jsonify(_, v) when is_atom(v) or is_integer(v) or is_float(v), do: v
-  defp handle_jsonify(true, v), do: handle_jsonify(Jason, v)
+  defp handle_jsonify(_, v) when is_tuple(v), do: inspect(v)
+
+  defp handle_jsonify(_, %mod{} = v) when mod in [Date, DateTime, Duration, NaiveDateTime, Time],
+    do: mod.to_iso8601(v)
+
+  defp handle_jsonify(true, v), do: handle_jsonify(:json, v)
 
   defp handle_jsonify(jsonifier, v) when is_atom(jsonifier) do
     case jsonifier.encode(v) do
+      list when is_list(list) -> list |> IO.chardata_to_string() |> jsonifier.decode()
       {:ok, json} -> jsonifier.decode!(json)
       _ -> inspect(v)
     end

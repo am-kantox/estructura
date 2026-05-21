@@ -210,6 +210,9 @@ defmodule Estructura.Hooks do
   end
 
   @spec coercion_ast(boolean() | [Cfg.key()], module(), [Cfg.key()]) :: Macro.t()
+  defp coercion_ast(false, _, []),
+    do: [quote(do: @compile({:inline, coerce_value: 2}))]
+
   defp coercion_ast(false, _, all_fields),
     do: [
       quote do
@@ -258,10 +261,13 @@ defmodule Estructura.Hooks do
         end
       end
 
-    [behaviour_clause | coerce_clauses] ++ coercion_ast(false, module, all_fields)
+    remaining = all_fields -- fields
+    [behaviour_clause | coerce_clauses] ++ coercion_ast(false, module, remaining)
   end
 
   @spec validation_ast(boolean() | [Cfg.key()], module(), [Cfg.key()]) :: Macro.t()
+  defp validation_ast(false, _, []), do: []
+
   defp validation_ast(false, _, all_fields),
     do: [
       quote do
@@ -310,7 +316,8 @@ defmodule Estructura.Hooks do
         end
       end
 
-    [behaviour_clause | validate_clauses] ++ validation_ast(false, module, all_fields)
+    remaining = all_fields -- fields
+    [behaviour_clause | validate_clauses] ++ validation_ast(false, module, remaining)
   end
 
   @spec enumerable_ast(boolean(), [Cfg.key()]) :: Macro.t()

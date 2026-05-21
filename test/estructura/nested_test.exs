@@ -7,8 +7,6 @@ defmodule Estructura.Nested.Test do
 
   alias Estructura.User
 
-  require Integer
-
   @user %User{}
 
   property "Access" do

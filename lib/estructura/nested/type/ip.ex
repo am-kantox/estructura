@@ -107,6 +107,8 @@ defmodule Estructura.Nested.Type.IP do
   defimpl Estructura.Transformer do
     @moduledoc false
 
+    def transform(value), do: transform(value, [])
+
     def transform(value, _options) do
       to_string(value)
     end

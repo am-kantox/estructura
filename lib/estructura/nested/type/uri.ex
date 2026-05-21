@@ -87,6 +87,7 @@ end
 
 defimpl Estructura.Flattenable, for: URI do
   @moduledoc false
+  def flatten(%URI{} = uri), do: flatten(uri, [])
   def flatten(%URI{} = uri, _opts), do: to_string(uri)
 end
 

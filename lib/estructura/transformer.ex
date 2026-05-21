@@ -35,14 +35,19 @@ defprotocol Estructura.Transformer do
     `@derive {Estructura.Transformer, options}`. `Estructura` implementations derive it be default.
   """
 
+  @spec transform(t()) :: term()
+  def transform(input)
+
   @spec transform(t(), keyword()) :: term()
-  def transform(input, options \\ [])
+  def transform(input, options)
 end
 
 defimpl Estructura.Transformer, for: Any do
   defmacro __deriving__(module, _struct, options) do
     quote do
       defimpl Estructura.Transformer, for: unquote(module) do
+        def transform(input), do: transform(input, [])
+
         def transform(input, options) do
           options = Keyword.merge(unquote(options), options)
           type = Keyword.get(options, :type, true)
@@ -111,28 +116,37 @@ defimpl Estructura.Transformer, for: Any do
     end
   end
 
+  def transform(input), do: transform(input, [])
   def transform(input, _options), do: input
 end
 
 defimpl Estructura.Transformer, for: Atom do
+  def transform(input), do: transform(input, [])
+
   def transform(atom, _options) do
     atom
   end
 end
 
 defimpl Estructura.Transformer, for: Integer do
+  def transform(input), do: transform(input, [])
+
   def transform(integer, _options) do
     integer
   end
 end
 
 defimpl Estructura.Transformer, for: Float do
+  def transform(input), do: transform(input, [])
+
   def transform(float, _options) do
     float
   end
 end
 
 defimpl Estructura.Transformer, for: [List, Map] do
+  def transform(input), do: transform(input, [])
+
   def transform(enum, options) do
     only = Keyword.get(options, :only, [])
     except = Keyword.get(options, :except, [])
@@ -145,18 +159,24 @@ defimpl Estructura.Transformer, for: [List, Map] do
 end
 
 defimpl Estructura.Transformer, for: BitString do
+  def transform(input), do: transform(input, [])
+
   def transform(bitstring, _options) do
     bitstring
   end
 end
 
 defimpl Estructura.Transformer, for: [Date, Time, NaiveDateTime, DateTime] do
+  def transform(input), do: transform(input, [])
+
   def transform(value, _options) do
     @for.to_iso8601(value)
   end
 end
 
 defimpl Estructura.Transformer, for: URI do
+  def transform(input), do: transform(input, [])
+
   def transform(value, _options) do
     @for.to_string(value)
   end

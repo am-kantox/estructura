@@ -24,7 +24,8 @@ defmodule Estructura.Config do
           calculated: [{key(), binary()}],
           colleactable: false | key(),
           enumerable: boolean(),
-          generator: [{key(), generator()}]
+          generator: [{key(), generator()}],
+          indifferent: boolean()
         }
 
   defstruct access: true,
@@ -33,5 +34,6 @@ defmodule Estructura.Config do
             calculated: [],
             collectable: false,
             enumerable: false,
-            generator: false
+            generator: false,
+            indifferent: false
 end

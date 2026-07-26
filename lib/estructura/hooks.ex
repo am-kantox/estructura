@@ -5,10 +5,11 @@ defmodule Estructura.Hooks do
 
   # credo:disable-for-this-file Credo.Check.Refactor.LongQuoteBlocks
 
-  @spec access_ast(boolean(), [{Cfg.key(), binary()}], [Cfg.key()]) :: Macro.t()
-  defp access_ast(false, _calculated, _fields), do: []
+  @spec access_ast(boolean(), [{Cfg.key(), binary()}], [Cfg.key()], boolean()) :: Macro.t()
+  defp access_ast(false, _calculated, _fields, _indifferent), do: []
 
-  defp access_ast(lazy?, calculated, fields) when lazy? in [true, :lazy] and is_list(fields) do
+  defp access_ast(lazy?, calculated, fields, indifferent)
+       when lazy? in [true, :lazy] and is_list(fields) do
     opening =
       quote generated: true, location: :keep do
         alias Estructura.Lazy
@@ -206,7 +207,72 @@ defmodule Estructura.Hooks do
           do: raise(KeyError, key: key, term: term)
       end
 
-    [opening, recalculate_clause | clauses] ++ [closing]
+    indifferent_clauses = if indifferent, do: List.wrap(indifferent_access_ast(fields)), else: []
+    [opening, recalculate_clause | clauses] ++ indifferent_clauses ++ [closing]
+  end
+
+  @spec indifferent_access_ast([Cfg.key()]) :: Macro.t()
+  defp indifferent_access_ast(fields) do
+    string_to_atom_map = Map.new(fields, fn name -> {Atom.to_string(name), name} end)
+
+    quote generated: true, location: :keep do
+      @__wia_string_to_atom__ unquote(Macro.escape(string_to_atom_map))
+
+      @doc false
+      @spec __fields__() :: [atom()]
+      def __fields__, do: unquote(fields)
+
+      @doc false
+      @compile {:inline, normalize_key: 1}
+      def normalize_key(key) when is_atom(key) and key in unquote(fields), do: {:ok, key}
+      def normalize_key(key) when is_binary(key), do: Map.fetch(@__wia_string_to_atom__, key)
+      def normalize_key(_key), do: :error
+
+      def put(%__MODULE__{} = data, key, value) when is_binary(key) do
+        case normalize_key(key) do
+          {:ok, atom_key} -> put(data, atom_key, value)
+          :error -> {:error, Exception.message(%KeyError{key: key, term: data})}
+        end
+      end
+
+      def put!(%__MODULE__{} = data, key, value) when is_binary(key) do
+        case normalize_key(key) do
+          {:ok, atom_key} -> put!(data, atom_key, value)
+          :error -> raise KeyError, key: key, term: data
+        end
+      end
+
+      def get(%__MODULE__{} = data, key, default) when is_binary(key) do
+        case normalize_key(key) do
+          {:ok, atom_key} -> get(data, atom_key, default)
+          :error -> default
+        end
+      end
+
+      @impl Access
+      def fetch(%__MODULE__{} = data, key) when is_binary(key) do
+        case normalize_key(key) do
+          {:ok, atom_key} -> fetch(data, atom_key)
+          :error -> :error
+        end
+      end
+
+      @impl Access
+      def pop(%__MODULE__{} = data, key) when is_binary(key) do
+        case normalize_key(key) do
+          {:ok, atom_key} -> pop(data, atom_key)
+          :error -> {nil, data}
+        end
+      end
+
+      @impl Access
+      def get_and_update(%__MODULE__{} = data, key, fun) when is_binary(key) do
+        case normalize_key(key) do
+          {:ok, atom_key} -> get_and_update(data, atom_key, fun)
+          :error -> raise KeyError, key: key, term: data
+        end
+      end
+    end
   end
 
   @spec coercion_ast(boolean() | [Cfg.key()], module(), [Cfg.key()]) :: Macro.t()
@@ -684,7 +750,7 @@ defmodule Estructura.Hooks do
           fields
       end
 
-    access_ast = access_ast(config.access, config.calculated, fields)
+    access_ast = access_ast(config.access, config.calculated, fields, config.indifferent)
     coercion_ast = coercion_ast(config.access && config.coercion, module, fields)
     validation_ast = validation_ast(config.access && config.validation, module, fields)
 

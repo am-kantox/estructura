@@ -13,7 +13,7 @@ defmodule Estructura do
 
   ### Use Options
 
-  `use Estructura` accepts four keyword arguments.
+  `use Estructura` accepts the following keyword arguments.
 
     * `access: true | false | :lazy` whether to generate the `Access` implementation, default `true`;
       when `true` or `:lazy`, it also produces `put/3` and `get/3` methods to be used with `coercion`
@@ -30,6 +30,9 @@ defmodule Estructura do
     * `generator: %{optional(key()) => Estructura.Config.generator()}` the instructions
       for the `__generate__/{0,1}` functions that would produce the target structure values suitable
       for usage in `StreamData` property testing; the generated `__generator__/1` function is overwritable.
+    * `indifferent: boolean()` whether to generate indifferent access support, allowing
+      both atom and binary keys (e. g. `struct[:foo]` and `struct["foo"]`), default `false`;
+      see also `Estructura.WIA` which sets this option and provides a higher-level API
 
   Please note, that setting `coercion` and/or `validation` to truthy values has effect
     if and only if `access` has been also set to `true`.

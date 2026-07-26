@@ -151,6 +151,48 @@ JSON Schema types and formats are automatically mapped to Estructura types
 `allOf` merging, nullable types, and `default` value extraction.
 See `Estructura.Nested.JsonSchema` for the full type mapping reference.
 
+### With Indifferent Access
+
+Inspired by Ruby's `Hash#with_indifferent_access`, `Estructura.WIA` provides struct-like
+containers accessible by both atom and binary keys:
+
+```elixir
+defmodule Config do
+  use Estructura.WIA,
+    fields: [
+      host: [default: "localhost"],
+      port: [default: 4000, coerce: true, validate: true]
+    ]
+
+  @impl Config.Coercible
+  def coerce_port(value) when is_integer(value), do: {:ok, value}
+  def coerce_port(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {int, ""} -> {:ok, int}
+      _ -> {:error, "invalid port"}
+    end
+  end
+
+  @impl Config.Validatable
+  def validate_port(port) when port in 1..65535, do: {:ok, port}
+  def validate_port(port), do: {:error, "port out of range: #{port}"}
+end
+
+iex> config = %Config{}
+iex> config[:port]
+4000
+iex> config["port"]
+4000
+iex> put_in(config, ["port"], "8080")
+%Config{host: "localhost", port: 8080}
+```
+
+`Enumerable`, `Collectable`, `Inspect`, and `Jason.Encoder` protocols
+are implemented automatically to mimic map behaviour.
+
+The underlying `indifferent: true` option is also available directly
+via `use Estructura` for custom struct definitions.
+
 ### Coercion and Validation
 
 Estructura provides flexible coercion and validation:
@@ -221,6 +263,7 @@ end
 ```
 
 ## Changelog
+* `1.14.0` — `Estructura.WIA` for _With Indifferent Access_ structs (atom and binary keys); `indifferent: true` option for `use Estructura`
 * `1.11.0` -- `json_schema/1` macro to derive `Estructura.Nested` from JSON Schema definitions
 * `1.10.0` -- `TimeSeries` type, propagate already set values as payload to `StreamData.bind/2`
 * `1.8.0` — `validate/1`

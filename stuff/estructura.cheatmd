@@ -29,6 +29,39 @@ defmodule User do
 end
 ```
 
+### `use Estructura.WIA`
+
+#### With Indifferent Access (atom and binary keys)
+
+```elixir
+defmodule Config do
+  use Estructura.WIA,
+    fields: [
+      host: [default: "localhost"],
+      port: [default: 4000, coerce: true, validate: true]
+    ]
+
+  @impl Config.Coercible
+  def coerce_port(value) when is_integer(value), do: {:ok, value}
+  def coerce_port(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {int, ""} -> {:ok, int}
+      _ -> {:error, "invalid port"}
+    end
+  end
+
+  @impl Config.Validatable
+  def validate_port(port) when port in 1..65535, do: {:ok, port}
+  def validate_port(_port), do: {:error, "port out of range"}
+end
+
+# Access with both atom and binary keys
+config = %Config{}
+config[:port]    #=> 4000
+config["port"]   #=> 4000
+put_in(config, ["port"], "8080")  #=> %Config{host: "localhost", port: 8080}
+```
+
 ## Type System
 
 ### Built-in Types
@@ -132,5 +165,6 @@ end
 - `flattenable: true` - Enable structure flattening
 - `jason: true` - Enable JSON encoding
 - `transformer: true` - Enable transformation capabilities
+- `indifferent: true` - Enable indifferent access (atom and binary keys)
 
-## Version: 1.9.0
+## Version: 1.14.0

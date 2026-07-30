@@ -2,7 +2,7 @@ defmodule Estructura.MixProject do
   use Mix.Project
 
   @app :estructura
-  @version "1.14.0"
+  @version "1.15.0"
 
   def project do
     [
@@ -50,7 +50,7 @@ defmodule Estructura.MixProject do
 
   defp deps do
     [
-      {:stream_data, "~> 1.0"},
+      {:stream_data, "~> 1.0", optional: true},
       {:elixir_uuid, "~> 1.2"},
       {:lazy_for, "~> 1.0"},
       {:jason, "~> 1.0", optional: true},

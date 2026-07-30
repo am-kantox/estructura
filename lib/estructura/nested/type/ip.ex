@@ -114,8 +114,18 @@ defmodule Estructura.Nested.Type.IP do
     end
   end
 
-  @impl true
-  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.ip(opts)
+  if Code.ensure_loaded?(StreamData) do
+    @impl true
+    def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.ip(opts)
+  else
+    @impl true
+    def generate(_opts \\ [], _payload \\ []),
+      do:
+        raise(
+          "Estructura requires the optional :stream_data dependency for data generation; " <>
+            "add {:stream_data, \"~> 1.0\"} to your dependencies"
+        )
+  end
 
   @impl true
   def coerce(term) when is_binary(term) do

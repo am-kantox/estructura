@@ -4,10 +4,20 @@ defmodule Estructura.Nested.Type.String do
   """
   @behaviour Estructura.Nested.Type
 
-  @impl true
-  def generate(opts \\ [], _payload \\ []) do
-    {kind_or_codepoints, opts} = Keyword.pop(opts, :kind_of_codepoints, :printable)
-    StreamData.string(kind_or_codepoints, opts)
+  if Code.ensure_loaded?(StreamData) do
+    @impl true
+    def generate(opts \\ [], _payload \\ []) do
+      {kind_or_codepoints, opts} = Keyword.pop(opts, :kind_of_codepoints, :printable)
+      StreamData.string(kind_or_codepoints, opts)
+    end
+  else
+    @impl true
+    def generate(_opts \\ [], _payload \\ []),
+      do:
+        raise(
+          "Estructura requires the optional :stream_data dependency for data generation; " <>
+            "add {:stream_data, \"~> 1.0\"} to your dependencies"
+        )
   end
 
   @impl true

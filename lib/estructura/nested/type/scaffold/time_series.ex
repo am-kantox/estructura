@@ -221,44 +221,55 @@ defmodule Estructura.Nested.Type.TimeSeries do
         defdelegate produce(opts \\ [], payload \\ []), to: Producer
 
         @behaviour Estructura.Nested.Type
-        @impl true
-        def generate(opts \\ [], payload \\ []) do
-          {payload_opts, payload} = Keyword.pop(payload, :__opts__, [])
-          opts = Keyword.merge(payload_opts, opts)
 
-          {pool, opts} = Keyword.pop(opts, :pool, 100)
-          {naive, opts} = Keyword.pop(opts, :naive, false)
+        if Code.ensure_loaded?(StreamData) do
+          @impl true
+          def generate(opts \\ [], payload \\ []) do
+            {payload_opts, payload} = Keyword.pop(payload, :__opts__, [])
+            opts = Keyword.merge(payload_opts, opts)
 
-          do_generate({naive, pool}, opts, payload)
-        end
+            {pool, opts} = Keyword.pop(opts, :pool, 100)
+            {naive, opts} = Keyword.pop(opts, :naive, false)
 
-        defp do_generate({true, pool}, opts, payload) do
-          opts
-          |> produce(payload)
-          |> Enum.take(pool)
-          |> StreamData.member_of()
-        end
+            do_generate({naive, pool}, opts, payload)
+          end
 
-        defp do_generate({false, pool}, opts, payload) do
-          %StreamData{
-            generator: fn rand_seed, _size ->
-              {rand_value, _new_seed} = :rand.uniform_s(1000, rand_seed)
-              seed_offset = div(rand_value, 10)
+          defp do_generate({true, pool}, opts, payload) do
+            opts
+            |> produce(payload)
+            |> Enum.take(pool)
+            |> StreamData.member_of()
+          end
 
-              stream = produce(opts, payload)
-              root = stream |> Stream.drop(seed_offset) |> Enum.at(0)
+          defp do_generate({false, pool}, opts, payload) do
+            %StreamData{
+              generator: fn rand_seed, _size ->
+                {rand_value, _new_seed} = :rand.uniform_s(1000, rand_seed)
+                seed_offset = div(rand_value, 10)
 
-              children =
-                stream
-                |> Stream.drop(seed_offset + 1)
-                |> Stream.take(pool)
-                |> Stream.map(fn value ->
-                  %StreamData.LazyTree{root: value, children: []}
-                end)
+                stream = produce(opts, payload)
+                root = stream |> Stream.drop(seed_offset) |> Enum.at(0)
 
-              %StreamData.LazyTree{root: root, children: children}
-            end
-          }
+                children =
+                  stream
+                  |> Stream.drop(seed_offset + 1)
+                  |> Stream.take(pool)
+                  |> Stream.map(fn value ->
+                    %StreamData.LazyTree{root: value, children: []}
+                  end)
+
+                %StreamData.LazyTree{root: root, children: children}
+              end
+            }
+          end
+        else
+          @impl true
+          def generate(_opts \\ [], _payload \\ []),
+            do:
+              raise(
+                "Estructura requires the optional :stream_data dependency for data generation; " <>
+                  "add {:stream_data, \"~> 1.0\"} to your dependencies"
+              )
         end
 
         @impl true

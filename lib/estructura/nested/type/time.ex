@@ -39,8 +39,18 @@ defmodule Estructura.Nested.Type.Time do
       iex> Time.generate(from: ~T[09:00:00], to: ~T[17:00:00]) |> Enum.take(1) |> List.first()
       #Time<...>
   """
-  @impl true
-  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.time(opts)
+  if Code.ensure_loaded?(StreamData) do
+    @impl true
+    def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.time(opts)
+  else
+    @impl true
+    def generate(_opts \\ [], _payload \\ []),
+      do:
+        raise(
+          "Estructura requires the optional :stream_data dependency for data generation; " <>
+            "add {:stream_data, \"~> 1.0\"} to your dependencies"
+        )
+  end
 
   @doc """
   Attempts to coerce a value into a Time.

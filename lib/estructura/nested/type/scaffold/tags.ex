@@ -24,16 +24,27 @@ defmodule Estructura.Nested.Type.Tags do
         @elements unquote(elements)
 
         @behaviour Estructura.Nested.Type
-        @impl true
-        def generate(opts \\ [], _payload \\ []) do
-          only = Keyword.get(opts, :only, @elements)
-          except = Keyword.get(opts, :except, [])
 
-          only
-          |> Kernel.--(except)
-          |> StreamData.member_of()
-          |> StreamData.list_of()
-          |> StreamData.map(&Enum.uniq/1)
+        if Code.ensure_loaded?(StreamData) do
+          @impl true
+          def generate(opts \\ [], _payload \\ []) do
+            only = Keyword.get(opts, :only, @elements)
+            except = Keyword.get(opts, :except, [])
+
+            only
+            |> Kernel.--(except)
+            |> StreamData.member_of()
+            |> StreamData.list_of()
+            |> StreamData.map(&Enum.uniq/1)
+          end
+        else
+          @impl true
+          def generate(_opts \\ [], _payload \\ []),
+            do:
+              raise(
+                "Estructura requires the optional :stream_data dependency for data generation; " <>
+                  "add {:stream_data, \"~> 1.0\"} to your dependencies"
+              )
         end
 
         @impl true

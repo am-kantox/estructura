@@ -255,15 +255,25 @@ defmodule Estructura.Aston do
   defp ast_content(text_node) when is_binary(text_node), do: text_node
   defp ast_content(list) when is_list(list), do: Enum.map(list, &ast_content/1)
 
-  @doc false
-  def child_gen(_child) do
-    StreamData.list_of(
-      StreamData.frequency([
-        {1, nil},
-        {2, StreamData.string(:alphanumeric)},
-        {7, Aston.__generator__()}
-      ]),
-      max_length: @max_children
-    )
+  if Code.ensure_loaded?(StreamData) do
+    @doc false
+    def child_gen(_child) do
+      StreamData.list_of(
+        StreamData.frequency([
+          {1, nil},
+          {2, StreamData.string(:alphanumeric)},
+          {7, Aston.__generator__()}
+        ]),
+        max_length: @max_children
+      )
+    end
+  else
+    @doc false
+    def child_gen(_child),
+      do:
+        raise(
+          "Estructura requires the optional :stream_data dependency for data generation; " <>
+            "add {:stream_data, \"~> 1.0\"} to your dependencies"
+        )
   end
 end

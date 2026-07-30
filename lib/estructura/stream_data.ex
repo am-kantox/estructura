@@ -5,226 +5,169 @@ defmodule Estructura.StreamData do
 
   # credo:disable-for-this-file Credo.Check.Refactor.Nesting
 
-  @typep seed() :: :rand.state()
-  @typep size() :: non_neg_integer()
-  @typep generator_fun(a) :: (seed(), size() -> StreamData.LazyTree.t(a))
+  if Code.ensure_loaded?(StreamData) do
+    @typep seed() :: :rand.state()
+    @typep size() :: non_neg_integer()
+    @typep generator_fun(a) :: (seed(), size() -> StreamData.LazyTree.t(a))
 
-  @typedoc """
-  An opaque type that represents an `Estructura.StreamData` generator that generates values
-  of type `a`.
-  """
-  @opaque t(a) :: %StreamData{generator: generator_fun(a)} | Enumerable.t()
+    @typedoc """
+    An opaque type that represents an `Estructura.StreamData` generator that generates values
+    of type `a`.
+    """
+    @opaque t(a) :: %StreamData{generator: generator_fun(a)} | Enumerable.t()
 
-  @doc "Identity function as a stream data generator"
-  @spec id(keyword()) :: StreamData.t((term() -> term()))
-  def id(_options \\ []) do
-    StreamData.constant(&Function.identity/1)
-  end
-
-  @doc "Helper to generate _unshrinkable_ streams as per `Stream.iterate/2`."
-  @spec iterate(value, (value -> value)) :: StreamData.t(value) when value: term()
-  def iterate(initial_value, next_fun) when is_function(next_fun, 1) do
-    initial_value
-    |> StreamData.constant()
-    |> StreamData.bind(&StreamData.constant(next_fun.(&1)))
-    |> StreamData.unshrinkable()
-  end
-
-  @spec date(keyword()) :: StreamData.t(Date.t())
-  @doc """
-  Generates an instance of `Date.t()`. This generator is unshrinkable.
-  """
-  def date(options \\ []) do
-    from = Keyword.get(options, :from, ~D|2000-01-01|)
-    to = Keyword.get(options, :to, Date.utc_today())
-    step = Keyword.get(options, :step, :random)
-
-    from
-    |> iterate(fn d ->
-      next =
-        case step do
-          days when is_integer(days) -> Date.add(d, days)
-          :random -> Date.add(d, Enum.random(-30..30//1))
-          {:random, num} -> Date.add(d, Enum.random(-num..num//1))
-        end
-
-      case Date.diff(to, next) do
-        diff when diff <= 0 -> to
-        diff when diff > 0 -> Date.add(from, diff)
-      end
-    end)
-  end
-
-  @spec datetime(keyword()) :: StreamData.t(DateTime.t())
-  @doc """
-  Generates an instance of `DateTime.t()`. This generator is unshrinkable.
-  """
-  def datetime(options \\ []) do
-    from = Keyword.get(options, :from, ~U|2000-01-01T00:00:00Z|)
-    to = Keyword.get(options, :to, DateTime.utc_now())
-    step = Keyword.get(options, :step, :random)
-
-    from
-    |> iterate(fn dt ->
-      next =
-        case step do
-          secs when is_integer(secs) -> DateTime.add(dt, secs, :second)
-          {num, unit} when is_integer(num) -> DateTime.add(dt, num, unit)
-          :random -> DateTime.add(dt, Enum.random(-86_400..86_400//1), :second)
-          {:random, num} -> DateTime.add(dt, Enum.random(-num..num//1), :second)
-        end
-
-      case DateTime.diff(to, next) do
-        diff when diff <= 0 -> to
-        diff when diff > 0 -> DateTime.add(from, diff)
-      end
-    end)
-  end
-
-  @spec time(keyword()) :: StreamData.t(Time.t())
-  @doc """
-  Generates an instance of `Time.t()`. This generator is unshrinkable.
-  """
-  def time(options \\ []) do
-    from = Keyword.get(options, :from, ~T|00:00:00|)
-    to = Keyword.get(options, :to, Time.utc_now())
-    step = Keyword.get(options, :step, :random)
-
-    from
-    |> iterate(fn t ->
-      next =
-        case step do
-          secs when is_integer(secs) -> Time.add(t, secs, :second)
-          {num, unit} when is_integer(num) -> Time.add(t, num, unit)
-          :random -> Time.add(t, Enum.random(-86_400..86_400//1), :second)
-          {:random, num} -> Time.add(t, Enum.random(-num..num//1), :second)
-        end
-
-      case Time.diff(to, next) do
-        diff when diff <= 0 -> to
-        diff when diff > 0 -> Time.add(from, diff)
-      end
-    end)
-  end
-
-  @spec uri(keyword()) :: StreamData.t(URI.t())
-  @doc """
-  Generates an instance of `URI.t()`. This generator is unshrinkable.
-
-  _See:_ `URI`.
-
-  ```elixir
-  [scheme]://[userinfo]@[host]:[port][path]?[query]#[fragment]
-  ```
-  """
-  def uri(options \\ []) do
-    path_fn = fn ->
-      if Keyword.get(options, :with_path),
-        do: ~w[path1 path2 path3/path4],
-        else: [nil, "/", "/path"]
+    @doc "Identity function as a stream data generator"
+    @spec id(keyword()) :: StreamData.t((term() -> term()))
+    def id(_options \\ []) do
+      StreamData.constant(&Function.identity/1)
     end
 
-    query_fn = fn ->
-      if Keyword.get(options, :with_query),
-        do: ~w[foo=42 bar=baz query=ok],
-        else: [nil, "foo=42", "bar=baz"]
+    @doc "Helper to generate _unshrinkable_ streams as per `Stream.iterate/2`."
+    @spec iterate(value, (value -> value)) :: StreamData.t(value) when value: term()
+    def iterate(initial_value, next_fun) when is_function(next_fun, 1) do
+      initial_value
+      |> StreamData.constant()
+      |> StreamData.bind(&StreamData.constant(next_fun.(&1)))
+      |> StreamData.unshrinkable()
     end
 
-    fragment_fn = fn ->
-      if Keyword.get(options, :with_fragment),
-        do: ~w[anchor1 anchor2],
-        else: [nil, "anchor1", "anchor2"]
-    end
+    @spec date(keyword()) :: StreamData.t(Date.t())
+    @doc """
+    Generates an instance of `Date.t()`. This generator is unshrinkable.
+    """
+    def date(options \\ []) do
+      from = Keyword.get(options, :from, ~D|2000-01-01|)
+      to = Keyword.get(options, :to, Date.utc_today())
+      step = Keyword.get(options, :step, :random)
 
-    schemes = Keyword.get(options, :scheme, ["https"])
-    userinfos = Keyword.get(options, :userinfo, [nil])
-    hosts = Keyword.get(options, :host, ["example.com"])
-    ports = Keyword.get(options, :port, [nil, 80, 443])
-    paths = Keyword.get_lazy(options, :path, path_fn)
-    queries = Keyword.get_lazy(options, :query, query_fn)
-    fragments = Keyword.get_lazy(options, :fragment, fragment_fn)
+      from
+      |> iterate(fn d ->
+        next =
+          case step do
+            days when is_integer(days) -> Date.add(d, days)
+            :random -> Date.add(d, Enum.random(-30..30//1))
+            {:random, num} -> Date.add(d, Enum.random(-num..num//1))
+          end
 
-    StreamData.bind(StreamData.member_of(schemes), fn scheme ->
-      StreamData.bind(StreamData.member_of(userinfos), fn userinfo ->
-        StreamData.bind(StreamData.member_of(hosts), fn host ->
-          StreamData.bind(StreamData.member_of(ports), fn port ->
-            StreamData.bind(StreamData.member_of(paths), fn path ->
-              StreamData.bind(StreamData.member_of(queries), fn query ->
-                StreamData.bind(StreamData.member_of(fragments), fn fragment ->
-                  path =
-                    case path do
-                      nil -> path
-                      "" -> path
-                      "/" <> _ -> path
-                      path when is_binary(path) -> "/" <> path
-                    end
-
-                  userinfo = if userinfo, do: "#{userinfo}@", else: ""
-                  port = if port, do: ":#{port}", else: ""
-                  query = if query, do: "?#{query}", else: ""
-                  fragment = if fragment, do: "##{fragment}", else: ""
-
-                  StreamData.constant(
-                    URI.new!("#{scheme}://#{userinfo}#{host}#{port}#{path}#{query}#{fragment}")
-                  )
-                end)
-              end)
-            end)
-          end)
-        end)
+        case Date.diff(to, next) do
+          diff when diff <= 0 -> to
+          diff when diff > 0 -> Date.add(from, diff)
+        end
       end)
-    end)
-  end
+    end
 
-  @spec ip4(keyword()) :: StreamData.t(Estructura.Nested.Type.IP.t())
-  @doc """
-  Generates an instance of `Estructura.Nested.Type.IP.t()`. This generator is unshrinkable.
-  """
-  def ip4(options \\ []) do
-    local_only? = Keyword.get(options, :local_only, false)
-    {n1, n2} = if local_only?, do: {[192, 10], [168]}, else: {0..255//1, 0..255//1}
+    @spec datetime(keyword()) :: StreamData.t(DateTime.t())
+    @doc """
+    Generates an instance of `DateTime.t()`. This generator is unshrinkable.
+    """
+    def datetime(options \\ []) do
+      from = Keyword.get(options, :from, ~U|2000-01-01T00:00:00Z|)
+      to = Keyword.get(options, :to, DateTime.utc_now())
+      step = Keyword.get(options, :step, :random)
 
-    StreamData.bind(StreamData.member_of(n1), fn n1 ->
-      StreamData.bind(StreamData.member_of(n2), fn n2 ->
-        StreamData.bind(StreamData.member_of(0..255//1), fn n3 ->
-          StreamData.bind(StreamData.member_of(0..255//1), fn n4 ->
-            StreamData.constant(%Estructura.Nested.Type.IP{
-              type: :v4,
-              n1: n1,
-              n2: n2,
-              n3: n3,
-              n4: n4
-            })
-          end)
-        end)
+      from
+      |> iterate(fn dt ->
+        next =
+          case step do
+            secs when is_integer(secs) -> DateTime.add(dt, secs, :second)
+            {num, unit} when is_integer(num) -> DateTime.add(dt, num, unit)
+            :random -> DateTime.add(dt, Enum.random(-86_400..86_400//1), :second)
+            {:random, num} -> DateTime.add(dt, Enum.random(-num..num//1), :second)
+          end
+
+        case DateTime.diff(to, next) do
+          diff when diff <= 0 -> to
+          diff when diff > 0 -> DateTime.add(from, diff)
+        end
       end)
-    end)
-  end
+    end
 
-  @spec ip6(keyword()) :: StreamData.t(Estructura.Nested.Type.IP.t())
-  @doc """
-  Generates an instance of `Estructura.Nested.Type.IP.t()`. This generator is unshrinkable.
-  """
-  def ip6(_options \\ []) do
-    StreamData.bind(StreamData.member_of(0..65_535//1), fn n1 ->
-      StreamData.bind(StreamData.member_of(0..65_535//1), fn n2 ->
-        StreamData.bind(StreamData.member_of(0..65_535//1), fn n3 ->
-          StreamData.bind(StreamData.member_of(0..65_535//1), fn n4 ->
-            StreamData.bind(StreamData.member_of(0..65_535//1), fn n5 ->
-              StreamData.bind(StreamData.member_of(0..65_535//1), fn n6 ->
-                StreamData.bind(StreamData.member_of(0..65_535//1), fn n7 ->
-                  StreamData.bind(StreamData.member_of(0..65_535//1), fn n8 ->
-                    StreamData.constant(%Estructura.Nested.Type.IP{
-                      type: :v6,
-                      n1: n1,
-                      n2: n2,
-                      n3: n3,
-                      n4: n4,
-                      n5: n5,
-                      n6: n6,
-                      n7: n7,
-                      n8: n8
-                    })
+    @spec time(keyword()) :: StreamData.t(Time.t())
+    @doc """
+    Generates an instance of `Time.t()`. This generator is unshrinkable.
+    """
+    def time(options \\ []) do
+      from = Keyword.get(options, :from, ~T|00:00:00|)
+      to = Keyword.get(options, :to, Time.utc_now())
+      step = Keyword.get(options, :step, :random)
+
+      from
+      |> iterate(fn t ->
+        next =
+          case step do
+            secs when is_integer(secs) -> Time.add(t, secs, :second)
+            {num, unit} when is_integer(num) -> Time.add(t, num, unit)
+            :random -> Time.add(t, Enum.random(-86_400..86_400//1), :second)
+            {:random, num} -> Time.add(t, Enum.random(-num..num//1), :second)
+          end
+
+        case Time.diff(to, next) do
+          diff when diff <= 0 -> to
+          diff when diff > 0 -> Time.add(from, diff)
+        end
+      end)
+    end
+
+    @spec uri(keyword()) :: StreamData.t(URI.t())
+    @doc """
+    Generates an instance of `URI.t()`. This generator is unshrinkable.
+
+    _See:_ `URI`.
+
+    ```elixir
+    [scheme]://[userinfo]@[host]:[port][path]?[query]#[fragment]
+    ```
+    """
+    def uri(options \\ []) do
+      path_fn = fn ->
+        if Keyword.get(options, :with_path),
+          do: ~w[path1 path2 path3/path4],
+          else: [nil, "/", "/path"]
+      end
+
+      query_fn = fn ->
+        if Keyword.get(options, :with_query),
+          do: ~w[foo=42 bar=baz query=ok],
+          else: [nil, "foo=42", "bar=baz"]
+      end
+
+      fragment_fn = fn ->
+        if Keyword.get(options, :with_fragment),
+          do: ~w[anchor1 anchor2],
+          else: [nil, "anchor1", "anchor2"]
+      end
+
+      schemes = Keyword.get(options, :scheme, ["https"])
+      userinfos = Keyword.get(options, :userinfo, [nil])
+      hosts = Keyword.get(options, :host, ["example.com"])
+      ports = Keyword.get(options, :port, [nil, 80, 443])
+      paths = Keyword.get_lazy(options, :path, path_fn)
+      queries = Keyword.get_lazy(options, :query, query_fn)
+      fragments = Keyword.get_lazy(options, :fragment, fragment_fn)
+
+      StreamData.bind(StreamData.member_of(schemes), fn scheme ->
+        StreamData.bind(StreamData.member_of(userinfos), fn userinfo ->
+          StreamData.bind(StreamData.member_of(hosts), fn host ->
+            StreamData.bind(StreamData.member_of(ports), fn port ->
+              StreamData.bind(StreamData.member_of(paths), fn path ->
+                StreamData.bind(StreamData.member_of(queries), fn query ->
+                  StreamData.bind(StreamData.member_of(fragments), fn fragment ->
+                    path =
+                      case path do
+                        nil -> path
+                        "" -> path
+                        "/" <> _ -> path
+                        path when is_binary(path) -> "/" <> path
+                      end
+
+                    userinfo = if userinfo, do: "#{userinfo}@", else: ""
+                    port = if port, do: ":#{port}", else: ""
+                    query = if query, do: "?#{query}", else: ""
+                    fragment = if fragment, do: "##{fragment}", else: ""
+
+                    StreamData.constant(
+                      URI.new!("#{scheme}://#{userinfo}#{host}#{port}#{path}#{query}#{fragment}")
+                    )
                   end)
                 end)
               end)
@@ -232,61 +175,120 @@ defmodule Estructura.StreamData do
           end)
         end)
       end)
-    end)
-  end
-
-  @spec ip(keyword()) :: StreamData.t(Estructura.Nested.Type.IP.t())
-  @doc """
-  Generates an instance of `Estructura.Nested.Type.IP.t()`. This generator is unshrinkable.
-  """
-  def ip(options \\ []) do
-    {type, options} = Keyword.pop(options, :version, Keyword.get(options, :type, [:v4]))
-
-    case List.wrap(type) do
-      [:v4] -> ip4(options)
-      [:v6] -> ip6(options)
-      _ -> StreamData.one_of([ip4(), ip6()])
     end
-  end
 
-  alias Estructura.Nested.Type.UUID, as: TypeUUID
+    @spec ip4(keyword()) :: StreamData.t(Estructura.Nested.Type.IP.t())
+    @doc """
+    Generates an instance of `Estructura.Nested.Type.IP.t()`. This generator is unshrinkable.
+    """
+    def ip4(options \\ []) do
+      local_only? = Keyword.get(options, :local_only, false)
+      {n1, n2} = if local_only?, do: {[192, 10], [168]}, else: {0..255//1, 0..255//1}
 
-  @spec uuid(keyword()) :: StreamData.t(Estructura.Nested.Type.UUID.t())
-  @doc """
-  Generates an instance of `Estructura.Nested.Type.UUID.t()`. This generator is unshrinkable.
+      StreamData.bind(StreamData.member_of(n1), fn n1 ->
+        StreamData.bind(StreamData.member_of(n2), fn n2 ->
+          StreamData.bind(StreamData.member_of(0..255//1), fn n3 ->
+            StreamData.bind(StreamData.member_of(0..255//1), fn n4 ->
+              StreamData.constant(%Estructura.Nested.Type.IP{
+                type: :v4,
+                n1: n1,
+                n2: n2,
+                n3: n3,
+                n4: n4
+              })
+            end)
+          end)
+        end)
+      end)
+    end
 
-  **NB** versions `3` and `5` require mandatory `namespace`/`uuid` and `name` options passed.
-  """
-  def uuid(options \\ []) do
-    format = Keyword.get(options, :format, :default)
+    @spec ip6(keyword()) :: StreamData.t(Estructura.Nested.Type.IP.t())
+    @doc """
+    Generates an instance of `Estructura.Nested.Type.IP.t()`. This generator is unshrinkable.
+    """
+    def ip6(_options \\ []) do
+      StreamData.bind(StreamData.member_of(0..65_535//1), fn n1 ->
+        StreamData.bind(StreamData.member_of(0..65_535//1), fn n2 ->
+          StreamData.bind(StreamData.member_of(0..65_535//1), fn n3 ->
+            StreamData.bind(StreamData.member_of(0..65_535//1), fn n4 ->
+              StreamData.bind(StreamData.member_of(0..65_535//1), fn n5 ->
+                StreamData.bind(StreamData.member_of(0..65_535//1), fn n6 ->
+                  StreamData.bind(StreamData.member_of(0..65_535//1), fn n7 ->
+                    StreamData.bind(StreamData.member_of(0..65_535//1), fn n8 ->
+                      StreamData.constant(%Estructura.Nested.Type.IP{
+                        type: :v6,
+                        n1: n1,
+                        n2: n2,
+                        n3: n3,
+                        n4: n4,
+                        n5: n5,
+                        n6: n6,
+                        n7: n7,
+                        n8: n8
+                      })
+                    end)
+                  end)
+                end)
+              end)
+            end)
+          end)
+        end)
+      end)
+    end
 
-    fun =
-      case Keyword.get(options, :version, 4) do
-        1 ->
-          clock_seq = Keyword.get(options, :clock_seq)
-          node = Keyword.get(options, :node)
-          if clock_seq || node, do: &UUID.uuid1(clock_seq, node, &1), else: &UUID.uuid1(&1)
+    @spec ip(keyword()) :: StreamData.t(Estructura.Nested.Type.IP.t())
+    @doc """
+    Generates an instance of `Estructura.Nested.Type.IP.t()`. This generator is unshrinkable.
+    """
+    def ip(options \\ []) do
+      {type, options} = Keyword.pop(options, :version, Keyword.get(options, :type, [:v4]))
 
-        3 ->
-          namespace_or_uuid =
-            Keyword.get_lazy(options, :namespace, fn -> Keyword.get(options, :uuid) end)
-
-          name = Keyword.get(options, :name)
-          &UUID.uuid3(namespace_or_uuid, name, &1)
-
-        4 ->
-          &UUID.uuid4/1
-
-        5 ->
-          namespace_or_uuid =
-            Keyword.get_lazy(options, :namespace, fn -> Keyword.get(options, :uuid, nil) end)
-
-          name = Keyword.get(options, :name)
-          &UUID.uuid5(namespace_or_uuid, name, &1)
+      case List.wrap(type) do
+        [:v4] -> ip4(options)
+        [:v6] -> ip6(options)
+        _ -> StreamData.one_of([ip4(), ip6()])
       end
+    end
 
-    StreamData.repeatedly(fn ->
-      with {:ok, result} <- TypeUUID.coerce(fun.(format)), do: result
-    end)
+    alias Estructura.Nested.Type.UUID, as: TypeUUID
+
+    @spec uuid(keyword()) :: StreamData.t(Estructura.Nested.Type.UUID.t())
+    @doc """
+    Generates an instance of `Estructura.Nested.Type.UUID.t()`. This generator is unshrinkable.
+
+    **NB** versions `3` and `5` require mandatory `namespace`/`uuid` and `name` options passed.
+    """
+    def uuid(options \\ []) do
+      format = Keyword.get(options, :format, :default)
+
+      fun =
+        case Keyword.get(options, :version, 4) do
+          1 ->
+            clock_seq = Keyword.get(options, :clock_seq)
+            node = Keyword.get(options, :node)
+            if clock_seq || node, do: &UUID.uuid1(clock_seq, node, &1), else: &UUID.uuid1(&1)
+
+          3 ->
+            namespace_or_uuid =
+              Keyword.get_lazy(options, :namespace, fn -> Keyword.get(options, :uuid) end)
+
+            name = Keyword.get(options, :name)
+            &UUID.uuid3(namespace_or_uuid, name, &1)
+
+          4 ->
+            &UUID.uuid4/1
+
+          5 ->
+            namespace_or_uuid =
+              Keyword.get_lazy(options, :namespace, fn -> Keyword.get(options, :uuid, nil) end)
+
+            name = Keyword.get(options, :name)
+            &UUID.uuid5(namespace_or_uuid, name, &1)
+        end
+
+      StreamData.repeatedly(fn ->
+        with {:ok, result} <- TypeUUID.coerce(fun.(format)), do: result
+      end)
+    end
   end
 end

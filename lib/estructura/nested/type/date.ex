@@ -39,8 +39,18 @@ defmodule Estructura.Nested.Type.Date do
       iex> Date.generate(from: ~D[2024-01-01], to: ~D[2024-12-31]) |> Enum.take(1) |> List.first()
       #Date<2024-...>
   """
-  @impl true
-  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.date(opts)
+  if Code.ensure_loaded?(StreamData) do
+    @impl true
+    def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.date(opts)
+  else
+    @impl true
+    def generate(_opts \\ [], _payload \\ []),
+      do:
+        raise(
+          "Estructura requires the optional :stream_data dependency for data generation; " <>
+            "add {:stream_data, \"~> 1.0\"} to your dependencies"
+        )
+  end
 
   @doc """
   Attempts to coerce a value into a Date.

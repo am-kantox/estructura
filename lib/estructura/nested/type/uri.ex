@@ -41,8 +41,18 @@ defmodule Estructura.Nested.Type.URI do
   Estructura.Nested.Type.URI.generate(schemes: ["ftp"]) |> Enum.take(1) |> List.first()
   #⇒ %URI{scheme: "ftp", host: "example.com", path: "/"}
   """
-  @impl true
-  def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.uri(opts)
+  if Code.ensure_loaded?(StreamData) do
+    @impl true
+    def generate(opts \\ [], _payload \\ []), do: Estructura.StreamData.uri(opts)
+  else
+    @impl true
+    def generate(_opts \\ [], _payload \\ []),
+      do:
+        raise(
+          "Estructura requires the optional :stream_data dependency for data generation; " <>
+            "add {:stream_data, \"~> 1.0\"} to your dependencies"
+        )
+  end
 
   @doc """
   Attempts to coerce a value into a URI.
